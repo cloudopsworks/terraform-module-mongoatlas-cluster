@@ -39,7 +39,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
     dynamic "region_configs" {
       for_each = try(var.settings.regions, [])
       content {
-        backing_provider_name = try(region_configs.value.backing_provider, "AWS")
+        backing_provider_name = try(region_configs.value.backing_provider, null)
         provider_name         = try(region_configs.value.provider, "TENANT")
         region_name           = upper(replace(try(region_configs.value.region, "us-east-1"), "-", "_"))
         priority              = try(region_configs.value.priority, 7)
