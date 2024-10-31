@@ -17,8 +17,15 @@ variable "name" {
 }
 
 variable "project_id" {
-  description = "The ID of the project where the cluster will be created"
+  description = "(optional) The ID of the project where the cluster will be created"
   type        = string
+  default     = ""
+}
+
+variable "project_name" {
+  description = "(optional) The name of the project where the cluster will be created"
+  type        = string
+  default     = ""
 }
 
 variable "settings" {

@@ -4,9 +4,14 @@
 #            Distributed Under Apache v2.0 License
 #
 
+data "mongodbatlas_project" "this" {
+  count = var.project_name != "" ? 1 : 0
+  name  = var.project_name
+}
+
 resource "mongodbatlas_advanced_cluster" "this" {
   name                           = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name_short)
-  project_id                     = var.project_id
+  project_id                     = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
   cluster_type                   = try(var.settings.cluster_type, "REPLICASET")
   mongo_db_major_version         = var.settings.major_version
   termination_protection_enabled = var.settings.termination_protection
@@ -34,9 +39,10 @@ resource "mongodbatlas_advanced_cluster" "this" {
     dynamic "region_configs" {
       for_each = try(var.settings.regions, [])
       content {
-        provider_name = try(region_configs.value.provider, "AWS")
-        region_name   = upper(replace(try(region_configs.value.region, "us-east-1"), "-", "_"))
-        priority      = try(region_configs.value.priority, 7)
+        backing_provider_name = try(region_configs.value.backing_provider, "AWS")
+        provider_name         = try(region_configs.value.provider, "TENANT")
+        region_name           = upper(replace(try(region_configs.value.region, "us-east-1"), "-", "_"))
+        priority              = try(region_configs.value.priority, 7)
         dynamic "electable_specs" {
           for_each = length(try(region_configs.value.electable, {})) > 0 ? [region_configs.value.electable] : []
           content {
