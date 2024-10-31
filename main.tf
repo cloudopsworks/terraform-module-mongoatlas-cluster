@@ -102,7 +102,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
     for_each = local.all_tags
     content {
       key   = tags.key
-      value = tags.value
+      value = replace(tags.value, "/[/$%&#]/", "+")
     }
   }
 }
