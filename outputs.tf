@@ -21,10 +21,7 @@ output "cluster_state" {
 }
 
 output "cluster_containers" {
-  value = {
-    for k, v in mongodbatlas_advanced_cluster.this.replication_specs :
-    k => v.container_id
-  }
+  value = mongodbatlas_advanced_cluster.this.replication_specs.*.container_id
 }
 
 output "cluster_server_type" {
