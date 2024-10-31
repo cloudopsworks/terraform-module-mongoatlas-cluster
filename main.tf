@@ -22,7 +22,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
     read_preference = try(var.settings.bi_connector.read_preference, "secondary")
   }
   advanced_configuration {
-    default_write_concern                = try(var.settings.advanced.default_write_concern, "majority")
+    default_write_concern                = try(var.settings.advanced.default_write_concern, null)
     javascript_enabled                   = try(var.settings.advanced.javascript, false)
     minimum_enabled_tls_protocol         = try(var.settings.advanced.tls_protocol, "TLS1_2")
     no_table_scan                        = try(var.settings.advanced.no_table_scan, false)
