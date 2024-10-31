@@ -16,7 +16,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
   mongo_db_major_version         = var.settings.major_version
   termination_protection_enabled = var.settings.termination_protection
   version_release_system         = try(var.settings.version_release, "LTS")
-  config_server_management_mode  = try(var.settings.config_server, "ATLAS_MANAGED")
+  config_server_management_mode  = try(var.settings.config_server, null)
   bi_connector_config {
     enabled         = try(var.settings.bi_connector.enabled, false)
     read_preference = try(var.settings.bi_connector.read_preference, "secondary")
