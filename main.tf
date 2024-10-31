@@ -10,7 +10,7 @@ data "mongodbatlas_project" "this" {
 }
 
 resource "mongodbatlas_advanced_cluster" "this" {
-  name                           = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name_short)
+  name                           = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name)
   project_id                     = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
   cluster_type                   = try(var.settings.cluster_type, "REPLICASET")
   mongo_db_major_version         = var.settings.major_version
