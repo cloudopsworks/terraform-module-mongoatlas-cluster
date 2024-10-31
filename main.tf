@@ -49,8 +49,8 @@ resource "mongodbatlas_advanced_cluster" "this" {
             instance_size   = try(electable_specs.value.size, "M2")
             node_count      = try(electable_specs.value.count, 3)
             disk_iops       = try(electable_specs.value.iops, null)
-            ebs_volume_type = try(electable_specs.value.volume_type, "STANDARD")
-            disk_size_gb    = try(electable_specs.value.size_gb, null)
+            ebs_volume_type = try(electable_specs.value.volume_type, null)
+            disk_size_gb    = try(electable_specs.value.disk_size, null)
           }
         }
         dynamic "analytics_specs" {
@@ -59,8 +59,8 @@ resource "mongodbatlas_advanced_cluster" "this" {
             instance_size   = try(analytics_specs.value.size, "M2")
             node_count      = try(analytics_specs.value.count, 3)
             disk_iops       = try(analytics_specs.value.iops, null)
-            ebs_volume_type = try(analytics_specs.value.volume_type, "STANDARD")
-            disk_size_gb    = try(analytics_specs.value.size_gb, null)
+            ebs_volume_type = try(analytics_specs.value.volume_type, null)
+            disk_size_gb    = try(analytics_specs.value.disk_size, null)
           }
         }
         dynamic "read_only_specs" {
@@ -69,8 +69,8 @@ resource "mongodbatlas_advanced_cluster" "this" {
             instance_size   = try(read_only_specs.value.size, "M2")
             node_count      = try(read_only_specs.value.count, 3)
             disk_iops       = try(read_only_specs.value.iops, null)
-            ebs_volume_type = try(read_only_specs.value.volume_type, "STANDARD")
-            disk_size_gb    = try(read_only_specs.value.size_gb, null)
+            ebs_volume_type = try(read_only_specs.value.volume_type, null)
+            disk_size_gb    = try(read_only_specs.value.disk_size, null)
           }
         }
         auto_scaling {
