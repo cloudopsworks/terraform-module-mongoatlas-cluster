@@ -47,7 +47,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
           for_each = length(try(region_configs.value.electable, {})) > 0 ? [region_configs.value.electable] : []
           content {
             instance_size   = try(electable_specs.value.size, "M2")
-            node_count      = try(electable_specs.value.count, 3)
+            node_count      = try(electable_specs.value.count, null)
             disk_iops       = try(electable_specs.value.iops, null)
             ebs_volume_type = try(electable_specs.value.volume_type, null)
             disk_size_gb    = try(electable_specs.value.disk_size, null)
@@ -57,7 +57,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
           for_each = length(try(region_configs.value.analytics, {})) > 0 ? [region_configs.value.analytics] : []
           content {
             instance_size   = try(analytics_specs.value.size, "M2")
-            node_count      = try(analytics_specs.value.count, 3)
+            node_count      = try(analytics_specs.value.count, null)
             disk_iops       = try(analytics_specs.value.iops, null)
             ebs_volume_type = try(analytics_specs.value.volume_type, null)
             disk_size_gb    = try(analytics_specs.value.disk_size, null)
@@ -67,19 +67,33 @@ resource "mongodbatlas_advanced_cluster" "this" {
           for_each = length(try(region_configs.value.read_only, {})) > 0 ? [region_configs.value.read_only] : []
           content {
             instance_size   = try(read_only_specs.value.size, "M2")
-            node_count      = try(read_only_specs.value.count, 3)
+            node_count      = try(read_only_specs.value.count, null)
             disk_iops       = try(read_only_specs.value.iops, null)
             ebs_volume_type = try(read_only_specs.value.volume_type, null)
             disk_size_gb    = try(read_only_specs.value.disk_size, null)
           }
         }
-        auto_scaling {
-          disk_gb_enabled = try(region_configs.value.auto_scaling.disk, false)
-          compute_enabled = try(region_configs.value.auto_scaling.compute, false)
+
+        dynamic "auto_scaling" {
+          for_each = length(try(region_configs.value.auto_scaling, {})) > 0 ? [region_configs.value.auto_scaling] : []
+          content {
+            disk_gb_enabled            = try(auto_scaling.value.disk, false)
+            compute_max_instance_size  = try(auto_scaling.value.max_size, null)
+            compute_min_instance_size  = try(auto_scaling.value.min_size, null)
+            compute_scale_down_enabled = try(auto_scaling.value.scale_down, false)
+            compute_enabled            = try(auto_scaling.value.compute, false)
+          }
         }
-        analytics_auto_scaling {
-          disk_gb_enabled = try(region_configs.value.auto_scaling.analytics.disk, false)
-          compute_enabled = try(region_configs.value.auto_scaling.analytics.compute, false)
+
+        dynamic "analytics_auto_scaling" {
+          for_each = length(try(region_configs.value.auto_scaling.analytics, {})) > 0 ? [region_configs.value.auto_scaling.analytics] : []
+          content {
+            disk_gb_enabled            = try(analytics_auto_scaling.value.disk, false)
+            compute_max_instance_size  = try(analytics_auto_scaling.value.max_size, null)
+            compute_min_instance_size  = try(analytics_auto_scaling.value.min_size, null)
+            compute_scale_down_enabled = try(analytics_auto_scaling.value.scale_down, false)
+            compute_enabled            = try(analytics_auto_scaling.value.compute, false)
+          }
         }
       }
     }
