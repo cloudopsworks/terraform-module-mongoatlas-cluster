@@ -4,6 +4,10 @@
 #            Distributed Under Apache v2.0 License
 #
 
+output "cluster_name" {
+  value = mongodbatlas_advanced_cluster.this.name
+}
+
 output "cluster_id" {
   value = mongodbatlas_advanced_cluster.this.cluster_id
 }
@@ -26,4 +30,8 @@ output "cluster_containers" {
 
 output "cluster_server_type" {
   value = mongodbatlas_advanced_cluster.this.config_server_type
+}
+
+output "cluster_admin_user" {
+  value = try(var.settings.admin_user.enabled, false) ? mongodbatlas_database_user.admin_user[0].username : ""
 }
