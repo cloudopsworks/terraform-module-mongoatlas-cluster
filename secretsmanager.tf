@@ -9,10 +9,10 @@ locals {
     username                       = mongodbatlas_database_user.admin_user[0].username
     password                       = random_password.randompass[0].result
     engine                         = "mongodbatlas"
-    connection_strings             = mongodbatlas_advanced_cluster.this.connection_strings.*.standard
-    connection_strings_srv         = mongodbatlas_advanced_cluster.this.connection_strings.*.standard_srv
-    private_connection_strings     = flatten(mongodbatlas_advanced_cluster.this.connection_strings.*.private_endpoint.0.connection_string)
-    private_connection_strings_srv = flatten(mongodbatlas_advanced_cluster.this.connection_strings.*.private_endpoint.0.srv_connection_string)
+    connection_strings             = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
+    connection_strings_srv         = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
+    private_connection_strings     = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.connection_string : ""
+    private_connection_strings_srv = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.srv_connection_string : ""
     cluster_name                   = mongodbatlas_advanced_cluster.this.name
   } : null
 }
