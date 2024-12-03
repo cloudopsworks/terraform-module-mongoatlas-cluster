@@ -35,3 +35,15 @@ output "cluster_server_type" {
 output "cluster_admin_user" {
   value = try(var.settings.admin_user.enabled, false) ? mongodbatlas_database_user.admin_user[0].username : ""
 }
+
+output "cluster_secrets_admin_user" {
+  value = try(var.settings.admin_user.enabled, false) ? aws_secretsmanager_secret.dbuser[0].name : ""
+}
+
+output "cluster_secrets_admin_password" {
+  value = try(var.settings.admin_user.enabled, false) ? aws_secretsmanager_secret.randompass[0].name : ""
+}
+
+output "cluster_secrets_credentials" {
+  value = try(var.settings.admin_user.enabled, false) ? aws_secretsmanager_secret.atlas_cred[0].name : ""
+}
