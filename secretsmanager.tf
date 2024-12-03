@@ -14,7 +14,7 @@ locals {
     private_connection_strings     = flatten(mongodbatlas_advanced_cluster.this.connection_strings.*.private_endpoint.0.connection_string)
     private_connection_strings_srv = flatten(mongodbatlas_advanced_cluster.this.connection_strings.*.private_endpoint.0.srv_connection_string)
     cluster_name                   = mongodbatlas_advanced_cluster.this.name
-  } : {}
+  } : null
 }
 
 # Secrets saving
