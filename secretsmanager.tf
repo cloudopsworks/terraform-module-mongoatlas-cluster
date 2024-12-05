@@ -5,14 +5,24 @@
 #
 
 locals {
+  conn_str_arr         = split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.standard)
+  conn_str_srv_arr     = split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv)
+  conn_str             = format("%s//%s:%s@%s", local.conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_arr[1])
+  conn_str_srv         = format("%s//%s:%s@%s", local.conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_srv_arr[1])
+  pvt_conn_str_arr     = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.connection_string) : []
+  pvt_conn_str_srv_arr = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.srv_connection_string) : []
+  pvt_conn_str         = length(local.pvt_conn_str_arr) > 0 ? format("%s//%s:%s@%s", local.pvt_conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_arr[1]) : ""
+  pvt_conn_str_srv     = length(local.pvt_conn_str_srv_arr) > 0 ? format("%s//%s:%s@%s", local.pvt_conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_srv_arr[1]) : ""
   mongodb_credentials = try(var.settings.admin_user.enabled, false) ? {
     username                       = mongodbatlas_database_user.admin_user[0].username
     password                       = random_password.randompass[0].result
     engine                         = "mongodbatlas"
-    connection_strings             = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
-    connection_strings_srv         = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
-    private_connection_strings     = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.connection_string : ""
-    private_connection_strings_srv = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.srv_connection_string : ""
+    url                            = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
+    srv_url                        = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
+    connection_string              = local.conn_str
+    connection_string_srv          = local.conn_str_srv
+    private_connection_strings     = local.pvt_conn_str
+    private_connection_strings_srv = local.pvt_conn_str_srv
     cluster_name                   = mongodbatlas_advanced_cluster.this.name
   } : null
 }
