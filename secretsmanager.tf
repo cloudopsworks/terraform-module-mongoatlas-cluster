@@ -5,14 +5,14 @@
 #
 
 locals {
-  conn_str_arr         = split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.standard)
-  conn_str_srv_arr     = split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv)
-  conn_str             = format("%s//%s:%s@%s", local.conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_arr[1])
-  conn_str_srv         = format("%s//%s:%s@%s", local.conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_srv_arr[1])
+  conn_str_arr         = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard,""))
+  conn_str_srv_arr     = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv,""))
+  conn_str             = length(local.conn_str_arr) > 1 ? format("%s//%s:%s@%s", local.conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_arr[1]) : ""
+  conn_str_srv         = length(local.conn_str_srv_arr)> 1 ? format("%s//%s:%s@%s", local.conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_srv_arr[1]) : ""
   pvt_conn_str_arr     = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.connection_string) : []
   pvt_conn_str_srv_arr = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.srv_connection_string) : []
-  pvt_conn_str         = length(local.pvt_conn_str_arr) > 0 ? format("%s//%s:%s@%s", local.pvt_conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_arr[1]) : ""
-  pvt_conn_str_srv     = length(local.pvt_conn_str_srv_arr) > 0 ? format("%s//%s:%s@%s", local.pvt_conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_srv_arr[1]) : ""
+  pvt_conn_str         = length(local.pvt_conn_str_arr) > 1 ? format("%s//%s:%s@%s", local.pvt_conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_arr[1]) : ""
+  pvt_conn_str_srv     = length(local.pvt_conn_str_srv_arr) > 1 ? format("%s//%s:%s@%s", local.pvt_conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_srv_arr[1]) : ""
   mongodb_credentials = try(var.settings.admin_user.enabled, false) ? {
     username                       = mongodbatlas_database_user.admin_user[0].username
     password                       = random_password.randompass[0].result
@@ -30,7 +30,7 @@ locals {
 # Secrets saving
 resource "aws_secretsmanager_secret" "dbuser" {
   count = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin_user"
+  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user"
   tags  = local.all_tags
 }
 
@@ -42,7 +42,7 @@ resource "aws_secretsmanager_secret_version" "dbuser" {
 
 resource "aws_secretsmanager_secret" "randompass" {
   count = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin_user_password"
+  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user-password"
   tags  = local.all_tags
 }
 
@@ -55,7 +55,7 @@ resource "aws_secretsmanager_secret_version" "randompass" {
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred" {
   count = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/mongodbatlas-credentials"
+  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user-credentials"
   tags  = local.all_tags
 }
 
