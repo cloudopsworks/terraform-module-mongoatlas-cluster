@@ -17,20 +17,26 @@ resource "mongodbatlas_advanced_cluster" "this" {
   termination_protection_enabled = var.settings.termination_protection
   version_release_system         = try(var.settings.version_release, "LTS")
   config_server_management_mode  = try(var.settings.config_server, null)
-  bi_connector_config {
-    enabled         = try(var.settings.bi_connector.enabled, false)
-    read_preference = try(var.settings.bi_connector.read_preference, "secondary")
+  dynamic "bi_connector_config" {
+    for_each = length(try(var.settings.bi_connector, {})) > 0 ? [var.settings.bi_connector] : []
+    content {
+      enabled         = try(bi_connector_config.value.enabled, false)
+      read_preference = try(bi_connector_config.value.read_preference, "secondary")
+    }
   }
-  advanced_configuration {
-    default_write_concern                = try(var.settings.advanced.default_write_concern, null)
-    javascript_enabled                   = try(var.settings.advanced.javascript, false)
-    minimum_enabled_tls_protocol         = try(var.settings.advanced.tls_protocol, "TLS1_2")
-    no_table_scan                        = try(var.settings.advanced.no_table_scan, false)
-    oplog_size_mb                        = try(var.settings.advanced.oplog_size, null)
-    oplog_min_retention_hours            = try(var.settings.advanced.oplog_retention, null)
-    sample_size_bi_connector             = try(var.settings.advanced.bi.sample_size, null)
-    sample_refresh_interval_bi_connector = try(var.settings.advanced.bi.refresh_interval, 300)
-    transaction_lifetime_limit_seconds   = try(var.settings.advanced.transaction_lifetime, 60)
+  dynamic "advanced_configuration" {
+    for_each = length(try(var.settings.advanced, {})) > 0 ? [var.settings.advanced] : []
+    content {
+      default_write_concern                = try(advanced_configuration.value.default_write_concern, null)
+      javascript_enabled                   = try(advanced_configuration.value.javascript, false)
+      minimum_enabled_tls_protocol         = try(advanced_configuration.value.tls_protocol, "TLS1_2")
+      no_table_scan                        = try(advanced_configuration.value.no_table_scan, false)
+      oplog_size_mb                        = try(advanced_configuration.value.oplog_size, null)
+      oplog_min_retention_hours            = try(advanced_configuration.value.oplog_retention, null)
+      sample_size_bi_connector             = try(advanced_configuration.value.bi.sample_size, null)
+      sample_refresh_interval_bi_connector = try(advanced_configuration.value.bi.refresh_interval, 300)
+      transaction_lifetime_limit_seconds   = try(advanced_configuration.value.transaction_lifetime, 60)
+    }
   }
   replication_specs {
     num_shards = try(var.settings.shards, null)
