@@ -13,8 +13,8 @@ resource "mongodbatlas_advanced_cluster" "this" {
   name                           = var.name != "" ? var.name : format("%s-%s", var.name_prefix, local.system_name)
   project_id                     = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
   cluster_type                   = try(var.settings.cluster_type, "REPLICASET")
-  mongo_db_major_version         = var.settings.major_version
-  termination_protection_enabled = var.settings.termination_protection
+  mongo_db_major_version         = try(var.settings.major_version, null)
+  termination_protection_enabled = try(var.settings.termination_protection, null)
   version_release_system         = try(var.settings.version_release, "LTS")
   config_server_management_mode  = try(var.settings.config_server, null)
   dynamic "bi_connector_config" {
