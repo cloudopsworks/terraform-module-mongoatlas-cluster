@@ -28,14 +28,14 @@ resource "mongodbatlas_advanced_cluster" "this" {
     for_each = length(try(var.settings.advanced, {})) > 0 ? [var.settings.advanced] : []
     content {
       default_write_concern                = try(advanced_configuration.value.default_write_concern, null)
-      javascript_enabled                   = try(advanced_configuration.value.javascript, false)
-      minimum_enabled_tls_protocol         = try(advanced_configuration.value.tls_protocol, "TLS1_2")
-      no_table_scan                        = try(advanced_configuration.value.no_table_scan, false)
+      javascript_enabled                   = try(advanced_configuration.value.javascript, null)
+      minimum_enabled_tls_protocol         = try(advanced_configuration.value.tls_protocol, null)
+      no_table_scan                        = try(advanced_configuration.value.no_table_scan, null)
       oplog_size_mb                        = try(advanced_configuration.value.oplog_size, null)
       oplog_min_retention_hours            = try(advanced_configuration.value.oplog_retention, null)
       sample_size_bi_connector             = try(advanced_configuration.value.bi.sample_size, null)
-      sample_refresh_interval_bi_connector = try(advanced_configuration.value.bi.refresh_interval, 300)
-      transaction_lifetime_limit_seconds   = try(advanced_configuration.value.transaction_lifetime, 60)
+      sample_refresh_interval_bi_connector = try(advanced_configuration.value.bi.refresh_interval, null)
+      transaction_lifetime_limit_seconds   = try(advanced_configuration.value.transaction_lifetime, null)
     }
   }
   replication_specs {
