@@ -22,6 +22,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
   version_release_system         = try(var.settings.version_release, "LTS")
   config_server_management_mode  = try(var.settings.config_server, null)
   backup_enabled                 = try(var.settings.backup.enabled, null)
+  encryption_at_rest_provider    = try(var.settings.encryption_at_rest_enabled, false) ? "AWS" : null
   dynamic "bi_connector_config" {
     for_each = length(try(var.settings.bi_connector, {})) > 0 ? [var.settings.bi_connector] : []
     content {
