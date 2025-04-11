@@ -13,7 +13,7 @@
 locals {
   hoop_tags = length(try(var.settings.hoop.tags, [])) > 0 ? join(" ", [for v in var.settings.hoop.tags : "--tags \"${v}\""]) : ""
   hoop_connection = try(var.settings.hoop.enabled, false) ? (<<EOT
-hoop admin create connection ${lower(mongodbatlas_advanced_cluster.this.name)}-ow \
+hoop admin create connection mongo-db-${lower(mongodbatlas_advanced_cluster.this.name)}-ow \
   --agent ${var.settings.hoop.agent} \
   --type database/mongodb \
   -e "CONNECTION_STRING=_aws:${aws_secretsmanager_secret.atlas_cred[0].name}:connection_string" \
