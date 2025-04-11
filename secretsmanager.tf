@@ -28,31 +28,6 @@ locals {
 }
 
 # Secrets saving
-resource "aws_secretsmanager_secret" "dbuser" {
-  count = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user"
-  tags  = local.all_tags
-}
-
-resource "aws_secretsmanager_secret_version" "dbuser" {
-  count         = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.dbuser[count.index].id
-  secret_string = mongodbatlas_database_user.admin_user[count.index].username
-}
-
-resource "aws_secretsmanager_secret" "randompass" {
-  count = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user-password"
-  tags  = local.all_tags
-}
-
-resource "aws_secretsmanager_secret_version" "randompass" {
-  count         = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.randompass[count.index].id
-  secret_string = random_password.randompass[count.index].result
-}
-
-# Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred" {
   count = try(var.settings.admin_user.enabled, false) ? 1 : 0
   name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user-credentials"

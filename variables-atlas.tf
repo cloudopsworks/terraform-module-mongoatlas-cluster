@@ -123,8 +123,18 @@ variable "project_name" {
 #           iops: 1000 (optional, default null)
 #           volume_type: "gp2" (optional, default null)
 #           volume_size: 100 (optional, default null)
+#   hoop:
+#     enabled: true | false
+#     agent: hoop-agent-name
+#     tags: ["tag1", "tag2"]
 variable "settings" {
   description = "Settings for the module"
   type        = any
   default     = {}
+}
+
+variable "run_hoop" {
+  description = "Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null_resource"
+  type        = bool
+  default     = false
 }
