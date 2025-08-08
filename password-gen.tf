@@ -22,7 +22,7 @@ resource "random_password" "randompass" {
 }
 
 resource "random_password" "randompass_rotated" {
-  count            = try(var.settings.admin_user.enabled, false)&& try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
+  count            = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
   length           = 20
   special          = false
   override_special = "=_-"

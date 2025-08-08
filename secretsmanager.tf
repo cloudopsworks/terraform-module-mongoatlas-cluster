@@ -5,17 +5,36 @@
 #
 
 locals {
-  conn_str_arr         = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard, ""))
-  conn_str_srv_arr     = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv, ""))
-  conn_str             = length(local.conn_str_arr) > 1 ? format("%s//%s:%s@%s", local.conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_arr[1]) : ""
-  conn_str_srv         = length(local.conn_str_srv_arr) > 1 ? format("%s//%s:%s@%s", local.conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.conn_str_srv_arr[1]) : ""
+  admin_password = try(var.settings.admin_user.enabled, false) ? (
+    try(var.settings.admin_user.rotation_lambda_name, "") == "" ? random_password.randompass[0].result : random_password.randompass_rotated[0].result
+  ) : null
+  conn_str_arr     = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard, ""))
+  conn_str_srv_arr = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv, ""))
+  conn_str = try(var.settings.admin_user.enabled, false) ? (
+    length(local.conn_str_arr) > 1 ?
+    format("%s//%s:%s@%s", local.conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, local.admin_password, local.conn_str_arr[1])
+    : ""
+  ) : ""
+  conn_str_srv = try(var.settings.admin_user.enabled, false) ? (
+    length(local.conn_str_srv_arr) > 1 ?
+    format("%s//%s:%s@%s", local.conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, local.admin_password, local.conn_str_srv_arr[1])
+    : ""
+  ) : ""
   pvt_conn_str_arr     = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.connection_string) : []
   pvt_conn_str_srv_arr = length(mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint) > 0 ? split("//", mongodbatlas_advanced_cluster.this.connection_strings.0.private_endpoint.0.srv_connection_string) : []
-  pvt_conn_str         = length(local.pvt_conn_str_arr) > 1 ? format("%s//%s:%s@%s", local.pvt_conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_arr[1]) : ""
-  pvt_conn_str_srv     = length(local.pvt_conn_str_srv_arr) > 1 ? format("%s//%s:%s@%s", local.pvt_conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_srv_arr[1]) : ""
+  pvt_conn_str = try(var.settings.admin_user.enabled, false) ? (
+    length(local.pvt_conn_str_arr) > 1 ?
+    format("%s//%s:%s@%s", local.pvt_conn_str_arr[0], mongodbatlas_database_user.admin_user[0].username, local.admin_password, local.pvt_conn_str_arr[1])
+    : ""
+  ) : ""
+  pvt_conn_str_srv = try(var.settings.admin_user.enabled, false) ? (
+    length(local.pvt_conn_str_srv_arr) > 1 ?
+    format("%s//%s:%s@%s", local.pvt_conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, local.admin_password, local.pvt_conn_str_srv_arr[1])
+    : ""
+  ) : ""
   mongodb_credentials = try(var.settings.admin_user.enabled, false) ? {
     username                       = mongodbatlas_database_user.admin_user[0].username
-    password                       = try(var.settings.admin_user.rotation_lambda_name, "") == "" ? random_password.randompass[0].result : random_password.randompass_rotated[0].result
+    password                       = local.admin_password
     engine                         = "mongodbatlas"
     url                            = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
     srv_url                        = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
