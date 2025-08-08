@@ -15,7 +15,7 @@ locals {
   pvt_conn_str_srv     = length(local.pvt_conn_str_srv_arr) > 1 ? format("%s//%s:%s@%s", local.pvt_conn_str_srv_arr[0], mongodbatlas_database_user.admin_user[0].username, random_password.randompass[0].result, local.pvt_conn_str_srv_arr[1]) : ""
   mongodb_credentials = try(var.settings.admin_user.enabled, false) ? {
     username                       = mongodbatlas_database_user.admin_user[0].username
-    password                       = random_password.randompass[0].result
+    password                       = try(var.settings.admin_user.rotation_lambda_name, "") == "" ? random_password.randompass[0].result : random_password.randompass_rotated[0].result
     engine                         = "mongodbatlas"
     url                            = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
     srv_url                        = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
