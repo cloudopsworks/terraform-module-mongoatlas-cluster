@@ -1,4 +1,4 @@
-name: Terraform Transit Gateway Module
+name: Terraform Mongo DB Atlas Cluster with AWS Secrets Manager
 #logo: logo/logo.jpg
 
 license: "APACHE2"
@@ -8,23 +8,365 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-mongoatlas-cluster
 
 description: |-
-  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+  Terraform module for provisioning and managing MongoDB Atlas clusters with AWS Secrets Manager integration. 
+  Supports automated password rotation, private endpoints, and secure credential management through AWS Secrets Manager.
 
 # Introduction to the project
-#introduction: |-
-#  This is an introduction.
+introduction: |-
+  This Terraform module provides a comprehensive solution for deploying and managing MongoDB Atlas clusters with seamless AWS Secrets Manager integration. It handles:
+
+  - MongoDB Atlas cluster provisioning with customizable configurations
+  - Automatic admin user creation with secure password generation
+  - AWS Secrets Manager integration for credential storage
+  - Optional password rotation through AWS Lambda
+  - Support for both standard and SRV connection strings
+  - Private endpoint configuration capabilities
 
 # How to use this project
-#usage: |-
+usage: |-
+  ### Basic Configuration
+
+  ```hcl
+  module "mongodb_cluster" {
+    source = "cloudopsworks/terraform-module-mongoatlas-cluster"
+
+    project_id = "your-atlas-project-id"
+    name       = "my-cluster"
+    environment = "development"
+
+    settings = {
+      admin_user = {
+        enabled = true
+        username = "atlas-admin"
+        rotation_period = 90
+        auth_database = "admin"
+      }
+
+      cluster = {
+        mongo_db_major_version = "6.0"
+        provider_name         = "AWS"
+        backing_provider_name = "AWS"
+        provider_region_name  = "US_EAST_1"
+        provider_instance_size_name = "M10"
+        disk_size_gb = 10
+        backup_enabled = true
+        pit_enabled = false
+      }
+    }
+
+    tags = {
+      Environment = "development"
+      Project     = "example"
+    }
+  }
+  ```
+
+  ### Advanced Features
+
+  1. Password Rotation with Lambda:
+  ```hcl
+  settings = {
+    admin_user = {
+      enabled = true
+      rotation_lambda_name = "atlas-password-rotation-function"
+      rotate_immediately = true
+      rotation_period = 30
+      rotation_duration = "1h"
+      password_rotation_period = 90
+    }
+  }
+  ```
+
+  2. Private Endpoint Configuration:
+  ```hcl
+  settings = {
+    private_endpoint = {
+      enabled = true
+      region  = "us-east-1"
+      vpc_id  = "vpc-1234567"
+      subnet_ids = ["subnet-abc123", "subnet-def456"]
+      security_group_ids = ["sg-123456"]
+    }
+  }
+  ```
+
+  3. Advanced Cluster Settings:
+  ```hcl
+  settings = {
+    cluster = {
+      mongo_db_major_version = "6.0"
+      provider_name = "AWS"
+      provider_instance_size_name = "M30"
+      backup_enabled = true
+      pit_enabled = true
+      disk_size_gb = 100
+      auto_scaling_disk_gb_enabled = true
+      auto_scaling_compute_enabled = true
+      auto_scaling_compute_scale_down_enabled = true
+    }
+  }
+  ```
+  
+  ### Settings reference:
+  The following settings are supported:
+  ```yaml
+  settings:
+    cluster_type: "REPLICASET"
+    major_version: 7.0 (optional, default null)
+    termination_protection: true | false (optional, default null)
+    version_release: "LTS" | "GA" | "EA" (optional, default "LTS")
+    encryption_at_rest_enabled: true | false (optional, default false)
+    bi_connector:
+      enabled: true | false (optional, default false)
+      read_preference: "primary" | "secondary" | "primaryPreferred" | "secondaryPreferred" | "nearest" (optional, default "secondary")
+    admin_user:
+      enabled: true | false (optional, default false)
+      kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" # KMS key for the password secret or Alias
+      rotation_lambda_name: "rds-rotation-lambda" # Name of the lambda function to rotate the password, required if managed_password_rotation is false
+      rotation_period: 90 # Rotation period in days for the password, defaults to 90days
+      rotation_duration: "1h" # Duration of the lambda function to rotate the password, defaults to 1h
+    advanced:
+      default_write_concern: "majority" | "majorityAndTagSet" | "majorityAndTagSetAny" | "majorityAndTagSetAnyRemote" | "majorityAndTagSetAnyLocal" | "majorityAndTagSetAnyRemoteLocal" (optional, default null)
+      javascript: true | false (optional, default false)
+      tls_protocol: "TLS1_0" | "TLS1_1" | "TLS1_2" | "TLS1_3" (optional, default null)
+      no_table_scan: true | false (optional, default null)
+      oplog_size: 50 (in MB optional, default null)
+      oplog_retention: 30 (in hours optional, default null)
+      bi:
+        sample_size: 1000 (optional, default null)
+        refresh_interval: 60 (in seconds optional, default null)
+      transaction_lifetime: 30 (in minutes optional, default null)
+    backup:
+      enabled: true | false (optional, default false)
+      hour_of_day: 0-23 (optional, default 0)
+      minute_of_hour: 0-59 (optional, default 0)
+      restore_window_days: 1 (optional, default 1)
+      auto_export: true | false (optional, default false)
+      export_prefix: string (optional, default null)
+      hourly:
+        interval: number (default: 1)
+        retention_unit: string (default: "days")
+        retention_value: number (default: 1)
+      daily:
+        interval: number (default: 1)
+        retention_unit: string (default: "days")
+        retention_value: number (default: 7)
+      weekly:
+        interval: number (default: 1)
+        retention_unit: string (default: "weeks")
+        retention_value: number (default: 4)
+      monthly:
+        interval: number (default: 1)
+        retention_unit: string (default: "months")
+        retention_value: number (default: 12)
+      yearly:
+        interval: number (default: 1)
+        retention_unit: string (default: "years")
+        retention_value: number (default: 2)
+      export:
+        frecuency_type: "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" (optional, default daily)
+        bucket_name: string (required)
+        iam_role_id: string (required, IAM role ARN used for the bucket, assumed_role)
+      copy:
+        frequencies: []
+        region_name: "US_EAST_1" (optional, default region from deployment)
+        copy_oplogs: true | false (optional, default false)
+    global:
+      zone_name: "us-east-1" (optional, default null)
+      zone_id: "us-east-1a" (optional, default null)
+      regions:
+        backing_provider: "AWS" | "GCP" | "AZURE" (optional, default null)
+        provider: TENANT | SHARED | PUBLIC (optional, default TENANT)
+        region: "US_EAST_1" (optional, will use the region of the deployment)
+        priority: 1 (optional, default 7)
+        electable:
+          size: M10 (optional, default M2)
+          count: 3 (optional, default null)
+          iops: 1000 (optional, default null)
+          volume_type: "gp2" (optional, default null)
+          volume_size: 100 (optional, default null)
+        analythics:
+          size: M10 (optional, default M2)
+          count: 3 (optional, default null)
+          iops: 1000 (optional, default null)
+          volume_type: "gp2" (optional, default null)
+          volume_size: 100 (optional, default null)
+        read_only:
+          size: M10 (optional, default M2)
+          count: 3 (optional, default null)
+          iops: 1000 (optional, default null)
+          volume_type: "gp2" (optional, default null)
+          volume_size: 100 (optional, default null)
+        auto_scaling:
+          size: M10 (optional, default M2)
+          count: 3 (optional, default null)
+          iops: 1000 (optional, default null)
+          volume_type: "gp2" (optional, default null)
+          volume_size: 100 (optional, default null)
+          analythics:
+            size: M10 (optional, default M2)
+            count: 3 (optional, default null)
+            iops: 1000 (optional, default null)
+            volume_type: "gp2" (optional, default null)
+            volume_size: 100 (optional, default null)
+    hoop:
+      enabled: true | false
+      agent: hoop-agent-name
+      tags: ["tag1", "tag2"]
+  ```
 
 # Example usage
-#examples: |-
+examples: |-
+  ### Terragrunt Basic Example
+
+  ```hcl
+  # terragrunt.hcl
+  include {
+    path = find_in_parent_folders()
+  }
+
+  terraform {
+    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster.git?ref=v1.0.0"
+  }
+
+  inputs = {
+    project_id = "your-atlas-project-id"
+    name       = "production-cluster"
+
+    settings = {
+      admin_user = {
+        enabled = true
+        username = "prod-admin"
+      }
+
+      cluster = {
+        mongo_db_major_version = "6.0"
+        provider_name         = "AWS"
+        provider_region_name  = "US_EAST_1"
+        provider_instance_size_name = "M30"
+      }
+    }
+  }
+  ```
+
+  ### Terragrunt Production Example with Private Endpoint
+
+  ```hcl
+  # terragrunt.hcl
+  include {
+    path = find_in_parent_folders()
+  }
+
+  terraform {
+    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster.git?ref=v1.0.0"
+  }
+
+  inputs = {
+    project_id = "your-atlas-project-id"
+    name       = "production-cluster"
+
+    settings = {
+      admin_user = {
+        enabled = true
+        username = "prod-admin"
+        rotation_lambda_name = "atlas-rotation-lambda"
+        rotation_period = 30
+      }
+
+      cluster = {
+        mongo_db_major_version = "6.0"
+        provider_name         = "AWS"
+        provider_region_name  = "US_EAST_1"
+        provider_instance_size_name = "M30"
+        backup_enabled        = true
+        pit_enabled          = true
+      }
+
+      private_endpoint = {
+        enabled = true
+        region  = "us-east-1"
+        vpc_id  = dependency.vpc.outputs.vpc_id
+      }
+    }
+  }
+  ```
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
+  1. Configure AWS credentials:
+     ```bash
+     export AWS_ACCESS_KEY_ID="your_access_key"
+     export AWS_SECRET_ACCESS_KEY="your_secret_key"
+     export AWS_REGION="us-east-1"
+     ```
+
+  2. Configure MongoDB Atlas Provider:
+     ```bash
+     export MONGODB_ATLAS_PUBLIC_KEY="your_public_key"
+     export MONGODB_ATLAS_PRIVATE_KEY="your_private_key"
+     ```
+
+  3. Create a basic module configuration in `main.tf`:
+     ```hcl
+     module "mongodb" {
+       source = "cloudopsworks/terraform-module-mongoatlas-cluster"
+
+       project_id = "your-atlas-project-id"
+       name       = "quick-start-cluster"
+       environment = "development"
+
+       settings = {
+         admin_user = {
+           enabled = true
+           username = "quick-start-admin"
+         }
+
+         cluster = {
+           mongo_db_major_version = "6.0"
+           provider_name = "AWS"
+           provider_region_name = "US_EAST_1"
+           provider_instance_size_name = "M10"
+           backup_enabled = true
+         }
+       }
+
+       tags = {
+         Environment = "development"
+         Project     = "quickstart"
+       }
+     }
+     ```
+
+  4. Initialize Terraform:
+     ```bash
+     terraform init
+     ```
+
+  5. Review the execution plan:
+     ```bash
+     terraform plan
+     ```
+
+  6. Apply the configuration:
+     ```bash
+     terraform apply
+     ```
+
+  7. Retrieve connection credentials from AWS Secrets Manager:
+     ```bash
+     aws secretsmanager get-secret-value \
+       --secret-id /mongodbatlas/quick-start-cluster/admin-user-credentials \
+       --query 'SecretString' \
+       --output text
+     ```
+
+  8. Test the connection using the MongoDB shell:
+     ```bash
+     mongosh "mongodb+srv://<username>:<password>@<cluster-url>"
+     ```
 
 include:
   - "docs/targets.md"
