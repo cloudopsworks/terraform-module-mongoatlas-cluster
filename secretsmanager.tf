@@ -82,7 +82,7 @@ resource "aws_secretsmanager_secret_rotation" "user" {
   count               = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
   secret_id           = aws_secretsmanager_secret.atlas_cred[0].id
   rotation_lambda_arn = data.aws_lambda_function.rotation_function[count.index].arn
-
+  rotate_immediately  = try(var.settings.admin_user.rotate_immediately, true)
   rotation_rules {
     automatically_after_days = try(var.settings.admin_user.rotation_period, 90)
     duration                 = try(var.settings.admin_user.rotation_duration, "1h")
