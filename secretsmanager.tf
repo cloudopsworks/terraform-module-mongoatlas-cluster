@@ -35,6 +35,9 @@ locals {
   mongodb_credentials = try(var.settings.admin_user.enabled, false) ? {
     username                       = mongodbatlas_database_user.admin_user[0].username
     password                       = local.admin_password
+    project_name                   = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this[0].name
+    project_id                     = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+    auth_database                  = try(var.settings.admin_user.auth_database, "admin")
     engine                         = "mongodbatlas"
     url                            = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
     srv_url                        = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
