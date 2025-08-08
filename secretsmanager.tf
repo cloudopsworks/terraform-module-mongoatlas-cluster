@@ -35,10 +35,23 @@ resource "aws_secretsmanager_secret" "atlas_cred" {
   tags        = local.all_tags
 }
 
+# If rotation lambda is not provided, create the secret version with the credentials
 resource "aws_secretsmanager_secret_version" "atlas_cred" {
-  count         = try(var.settings.admin_user.enabled, false) ? 1 : 0
+  count         = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") == "" ? 1 : 0
   secret_id     = aws_secretsmanager_secret.atlas_cred[count.index].id
   secret_string = jsonencode(local.mongodb_credentials)
+}
+
+# If rotation lambda is provided, create an initial secret version but ignore changes to it afterwards
+resource "aws_secretsmanager_secret_version" "atlas_cred_rotated" {
+  count         = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.atlas_cred[0].id
+  secret_string = jsonencode(local.mongodb_credentials)
+  lifecycle {
+    ignore_changes = [
+      secret_string
+    ]
+  }
 }
 
 data "aws_lambda_function" "rotation_function" {
