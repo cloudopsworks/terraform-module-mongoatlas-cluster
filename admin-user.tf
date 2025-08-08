@@ -9,7 +9,7 @@ resource "mongodbatlas_database_user" "admin_user" {
   auth_database_name = try(var.settings.admin_user.auth_database, "admin")
   project_id         = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
   username           = try(var.settings.admin_user.username, "${var.name != "" ? lower(var.name) : format("%s-%s", var.name_prefix, local.system_name_short)}-admin-user")
-  password           = random_password.randompass[count.index].result
+  password           = try(var.settings.admin_user.rotation_lambda_name, "") == "" ? random_password.randompass[count.index].result : random_password.randompass_rotated[count.index].result
 
   roles {
     database_name = "admin"
