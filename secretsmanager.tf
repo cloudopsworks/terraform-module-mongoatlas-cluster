@@ -29,13 +29,43 @@ locals {
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred" {
-  count = try(var.settings.admin_user.enabled, false) ? 1 : 0
-  name  = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user-credentials"
-  tags  = local.all_tags
+  count       = try(var.settings.admin_user.enabled, false) ? 1 : 0
+  name        = "${local.secret_store_path}/mongodbatlas/${mongodbatlas_advanced_cluster.this.name}/admin-user-credentials"
+  description = "Mongodbatlas Admin credentials - ${mongodbatlas_database_user.admin_user[0].username} - ${mongodbatlas_advanced_cluster.this.name}"
+  tags        = local.all_tags
 }
 
+# If rotation lambda is not provided, create the secret version with the credentials
 resource "aws_secretsmanager_secret_version" "atlas_cred" {
-  count         = try(var.settings.admin_user.enabled, false) ? 1 : 0
+  count         = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") == "" ? 1 : 0
   secret_id     = aws_secretsmanager_secret.atlas_cred[count.index].id
   secret_string = jsonencode(local.mongodb_credentials)
+}
+
+# If rotation lambda is provided, create an initial secret version but ignore changes to it afterwards
+resource "aws_secretsmanager_secret_version" "atlas_cred_rotated" {
+  count         = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.atlas_cred[0].id
+  secret_string = jsonencode(local.mongodb_credentials)
+  lifecycle {
+    ignore_changes = [
+      secret_string
+    ]
+  }
+}
+
+data "aws_lambda_function" "rotation_function" {
+  count         = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
+  function_name = var.settings.admin_user.rotation_lambda_name
+}
+
+resource "aws_secretsmanager_secret_rotation" "user" {
+  count               = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") != "" ? 1 : 0
+  secret_id           = aws_secretsmanager_secret.atlas_cred[0].id
+  rotation_lambda_arn = data.aws_lambda_function.rotation_function[count.index].arn
+
+  rotation_rules {
+    automatically_after_days = try(var.settings.admin_user.rotation_period, 90)
+    duration                 = try(var.settings.admin_user.rotation_duration, "1h")
+  }
 }

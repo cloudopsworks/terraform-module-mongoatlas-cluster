@@ -39,6 +39,12 @@ variable "project_name" {
 #   bi_connector:
 #     enabled: true | false (optional, default false)
 #     read_preference: "primary" | "secondary" | "primaryPreferred" | "secondaryPreferred" | "nearest" (optional, default "secondary")
+#   admin_user:
+#     enabled: true | false (optional, default false)
+#     kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" # KMS key for the password secret or Alias
+#     rotation_lambda_name: "rds-rotation-lambda" # Name of the lambda function to rotate the password, required if managed_password_rotation is false
+#     rotation_period: 90 # Rotation period in days for the password, defaults to 90days
+#     rotation_duration: "1h" # Duration of the lambda function to rotate the password, defaults to 1h
 #   advanced:
 #     default_write_concern: "majority" | "majorityAndTagSet" | "majorityAndTagSetAny" | "majorityAndTagSetAnyRemote" | "majorityAndTagSetAnyLocal" | "majorityAndTagSetAnyRemoteLocal" (optional, default null)
 #     javascript: true | false (optional, default false)
