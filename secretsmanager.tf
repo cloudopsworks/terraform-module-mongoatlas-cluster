@@ -71,7 +71,8 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_rotated" {
   secret_string = jsonencode(local.mongodb_credentials)
   lifecycle {
     ignore_changes = [
-      secret_string
+      secret_string,
+      version_stages
     ]
   }
 }
