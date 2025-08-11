@@ -8,6 +8,11 @@ locals {
   atlas_region = upper(replace(data.aws_region.current.name, "-", "_"))
 }
 
+data "mongodbatlas_project" "this_id" {
+  count = var.project_id != "" ? 1 : 0
+  id    = var.project_id
+}
+
 data "mongodbatlas_project" "this" {
   count = var.project_name != "" ? 1 : 0
   name  = var.project_name
