@@ -35,7 +35,7 @@ locals {
   mongodb_credentials = try(var.settings.admin_user.enabled, false) ? {
     username                       = mongodbatlas_database_user.admin_user[0].username
     password                       = local.admin_password
-    project_name                   = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this[0].name
+    project_name                   = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
     project_id                     = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
     auth_database                  = try(var.settings.admin_user.auth_database, "admin")
     engine                         = "mongodbatlas"
