@@ -9,8 +9,8 @@ locals {
 }
 
 data "mongodbatlas_project" "this_id" {
-  count = var.project_id != "" ? 1 : 0
-  id    = var.project_id
+  count      = var.project_id != "" ? 1 : 0
+  project_id = var.project_id
 }
 
 data "mongodbatlas_project" "this" {
