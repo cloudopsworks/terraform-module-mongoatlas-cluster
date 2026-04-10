@@ -42,7 +42,7 @@ introduction: |-
 
   - [`terraform-module-mongoatlas-aws-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-cluster)
   - [`terraform-module-mongoatlas-gcp-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-gcp-cluster)
-  - [`terraform-module-mongoatlas-azure-rm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azure-rm-cluster)
+  - [`terraform-module-mongoatlas-azurerm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azurerm-cluster)
 
 # How to use this project
 usage: |-
@@ -280,7 +280,7 @@ quickstart: |-
   2. Use one of the cloud-specific wrapper modules for full integration:
      - **AWS**: [`terraform-module-mongoatlas-aws-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-cluster)
      - **GCP**: [`terraform-module-mongoatlas-gcp-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-gcp-cluster)
-     - **Azure**: [`terraform-module-mongoatlas-azure-rm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azure-rm-cluster)
+     - **Azure**: [`terraform-module-mongoatlas-azurerm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azurerm-cluster)
 
   3. Or use this module directly in a Terragrunt configuration:
      ```hcl
