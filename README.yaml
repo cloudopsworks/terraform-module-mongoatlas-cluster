@@ -1,5 +1,12 @@
 name: Terraform Mongo DB Atlas Cluster with AWS Secrets Manager
 #logo: logo/logo.jpg
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudopsworks/terraform-module-mongoatlas-aws-project.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-project/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-mongoatlas-aws-project.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-project/commits
 
 license: "APACHE2"
 
