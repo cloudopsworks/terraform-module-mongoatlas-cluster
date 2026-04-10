@@ -39,6 +39,8 @@ output "cluster_admin_user" {
   value = try(var.settings.admin_user.enabled, false) ? mongodbatlas_database_user.admin_user[0].username : ""
 }
 
-output "cluster_secrets_credentials" {
-  value = try(var.settings.admin_user.enabled, false) ? aws_secretsmanager_secret.atlas_cred[0].name : ""
+output "cluster_credentials" {
+  description = "Full credentials map including username, password, connection strings. Sensitive — consumed by cloud-specific wrapper modules to store in their secret store."
+  value       = local.cluster_credentials
+  sensitive   = true
 }

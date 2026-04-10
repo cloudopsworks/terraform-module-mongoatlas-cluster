@@ -7,6 +7,18 @@
 #     Distributed Under Apache v2.0 License
 #
 
+variable "region" {
+  description = "Cloud provider region where the module is deployed. Used to compute the Atlas region name (e.g. 'us-east-1' → 'US_EAST_1'). Required when using backup copy settings or when no explicit region is set in settings.regions."
+  type        = string
+  default     = ""
+}
+
+variable "cloud_provider" {
+  description = "Default cloud provider for Atlas backup export bucket and copy settings. Valid values: 'AWS', 'GCP', 'AZURE'. Can be overridden per-resource in settings."
+  type        = string
+  default     = "AWS"
+}
+
 variable "name_prefix" {
   description = "Prefix for the name of the resources"
   type        = string
@@ -34,20 +46,25 @@ variable "project_name" {
 ##
 # Variable entries as YAML
 # settings:
-#   cluster_type: "REPLICASET"
-#   major_version: 7.0 (optional, default null)
-#   termination_protection: true | false (optional, default null)
-#   version_release: "LTS" | "GA" | "EA" (optional, default "LTS")
-#   encryption_at_rest_enabled: true | false (optional, default false)
+#   cluster_type: "REPLICASET"         # (Optional) Cluster type: REPLICASET | SHARDED | GEOSHARDED. Default: "REPLICASET"
+#   major_version: 7.0                 # (Optional) MongoDB major version. Default: null (uses Atlas default)
+#   termination_protection: true       # (Optional) Enable termination protection. Default: null
+#   version_release: "LTS"             # (Optional) Release cadence: LTS | CONTINUOUS. Default: "LTS"
+#   encryption_at_rest_enabled: false  # (Optional) Enable encryption at rest. Default: false
+#   encryption_at_rest_provider: "AWS" # (Optional) Provider for encryption at rest: AWS | GCP | AZURE. Default: "AWS"
+#   cloud_provider: "AWS"              # (Optional) Default cloud provider for backup export/copy: AWS | GCP | AZURE. Default: "AWS"
 #   bi_connector:
 #     enabled: true | false (optional, default false)
 #     read_preference: "primary" | "secondary" | "primaryPreferred" | "secondaryPreferred" | "nearest" (optional, default "secondary")
 #   admin_user:
-#     enabled: true | false (optional, default false)
-#     kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" # KMS key for the password secret or Alias
-#     rotation_lambda_name: "rds-rotation-lambda" # Name of the lambda function to rotate the password, required if managed_password_rotation is false
-#     rotation_period: 90 # Rotation period in days for the password, defaults to 90days
-#     rotation_duration: "1h" # Duration of the lambda function to rotate the password, defaults to 1h
+#     enabled: true | false            # (Optional) Create an Atlas admin user. Default: false
+#     username: "my-admin"             # (Optional) Username for the admin user. Default: auto-generated from name
+#     auth_database: "admin"           # (Optional) Authentication database. Default: "admin"
+#     use_external_rotation: false     # (Optional) When true, an external rotation manager handles the password. Default: false
+#     rotation_lambda_name: ""         # (Optional) External rotator identifier (e.g. Lambda name for AWS). Required when use_external_rotation is true.
+#     rotation_period: 90              # (Optional) Password rotation period in days. Default: 90
+#     rotation_duration: "1h"          # (Optional) Duration for external rotator execution. Default: "1h"
+#     password_rotation_period: 90     # (Optional) time_rotating period in days for Terraform-managed rotation. Default: 90
 #   advanced:
 #     default_write_concern: "majority" | "majorityAndTagSet" | "majorityAndTagSetAny" | "majorityAndTagSetAnyRemote" | "majorityAndTagSetAnyLocal" | "majorityAndTagSetAnyRemoteLocal" (optional, default null)
 #     javascript: true | false (optional, default false)
@@ -87,10 +104,14 @@ variable "project_name" {
 #       retention_unit: string (default: "years")
 #       retention_value: number (default: 2)
 #     export:
+#       cloud_provider: "AWS" | "GCP" | "AZURE"  # (Optional) Override cloud provider for this export bucket. Default: settings.cloud_provider
 #       frecuency_type: "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" (optional, default daily)
-#       bucket_name: string (required)
-#       iam_role_id: string (required, IAM role ARN used for the bucket, assumed_role)
+#       bucket_name: string              # (Required for AWS) S3 bucket name
+#       iam_role_id: string              # (Required for AWS) IAM role ID (assumed role) for bucket access
+#       service_url: string              # (Required for GCP/AZURE) Service URL for the export bucket
+#       role_id: string                  # (Required for GCP/AZURE) Role ID for bucket access
 #     copy:
+#       cloud_provider: "AWS" | "GCP" | "AZURE"  # (Optional) Override cloud provider for copy settings. Default: settings.cloud_provider
 #       frequencies: []
 #       region_name: "US_EAST_1" (optional, default region from deployment)
 #       copy_oplogs: true | false (optional, default false)

@@ -8,7 +8,7 @@
 #
 
 locals {
-  atlas_region = upper(replace(data.aws_region.current.name, "-", "_"))
+  atlas_region = upper(replace(var.region, "-", "_"))
 }
 
 data "mongodbatlas_project" "this_id" {
@@ -30,7 +30,7 @@ resource "mongodbatlas_advanced_cluster" "this" {
   version_release_system         = try(var.settings.version_release, "LTS")
   config_server_management_mode  = try(var.settings.config_server, null)
   backup_enabled                 = try(var.settings.backup.enabled, null)
-  encryption_at_rest_provider    = try(var.settings.encryption_at_rest_enabled, false) ? "AWS" : null
+  encryption_at_rest_provider    = try(var.settings.encryption_at_rest_enabled, false) ? try(var.settings.encryption_at_rest_provider, "AWS") : null
   dynamic "bi_connector_config" {
     for_each = length(try(var.settings.bi_connector, {})) > 0 ? [var.settings.bi_connector] : []
     content {
@@ -186,7 +186,7 @@ resource "mongodbatlas_cloud_backup_schedule" "this" {
   dynamic "copy_settings" {
     for_each = length(try(var.settings.backup.copy, {})) > 0 ? [var.settings.backup.copy] : []
     content {
-      cloud_provider     = "AWS"
+      cloud_provider     = try(copy_settings.value.cloud_provider, try(var.settings.cloud_provider, "AWS"))
       frequencies        = try(copy_settings.value.frequencies, [])
       region_name        = try(copy_settings.value.region_name, local.atlas_region)
       zone_id            = mongodbatlas_advanced_cluster.this.replication_specs.*.zone_id[0]
@@ -198,7 +198,9 @@ resource "mongodbatlas_cloud_backup_schedule" "this" {
 resource "mongodbatlas_cloud_backup_snapshot_export_bucket" "this" {
   count          = length(try(var.settings.backup.export, {})) > 0 ? 1 : 0
   project_id     = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
-  cloud_provider = "AWS"
+  cloud_provider = try(var.settings.backup.export.cloud_provider, try(var.settings.cloud_provider, "AWS"))
   bucket_name    = var.settings.backup.export.bucket_name
-  iam_role_id    = var.settings.backup.export.iam_role_id
+  iam_role_id    = try(var.settings.backup.export.iam_role_id, null)
+  service_url    = try(var.settings.backup.export.service_url, null)
+  role_id        = try(var.settings.backup.export.role_id, null)
 }
