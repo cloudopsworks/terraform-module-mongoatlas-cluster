@@ -8,7 +8,7 @@
 #
 
 locals {
-  admin_password   = try(var.settings.admin_user.enabled, false) ? (
+  admin_password = try(var.settings.admin_user.enabled, false) ? (
     try(var.settings.admin_user.rotation_lambda_name, "") == "" ? random_password.randompass[0].result : random_password.randompass_rotated[0].result
   ) : null
   conn_str_arr     = split("//", try(mongodbatlas_advanced_cluster.this.connection_strings.0.standard, ""))
@@ -36,18 +36,18 @@ locals {
     : ""
   ) : ""
   cluster_credentials = try(var.settings.admin_user.enabled, false) ? {
-    username                        = mongodbatlas_database_user.admin_user[0].username
-    password                        = local.admin_password
-    project_name                    = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
-    project_id                      = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
-    auth_database                   = try(var.settings.admin_user.auth_database, "admin")
-    engine                          = "mongodbatlas"
-    url                             = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
-    srv_url                         = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
-    connection_string               = local.conn_str
-    connection_string_srv           = local.conn_str_srv
-    private_connection_string       = local.pvt_conn_str
-    private_connection_string_srv   = local.pvt_conn_str_srv
-    cluster_name                    = mongodbatlas_advanced_cluster.this.name
+    username                      = mongodbatlas_database_user.admin_user[0].username
+    password                      = local.admin_password
+    project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
+    project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+    auth_database                 = try(var.settings.admin_user.auth_database, "admin")
+    engine                        = "mongodbatlas"
+    url                           = mongodbatlas_advanced_cluster.this.connection_strings.0.standard
+    srv_url                       = mongodbatlas_advanced_cluster.this.connection_strings.0.standard_srv
+    connection_string             = local.conn_str
+    connection_string_srv         = local.conn_str_srv
+    private_connection_string     = local.pvt_conn_str
+    private_connection_string_srv = local.pvt_conn_str_srv
+    cluster_name                  = mongodbatlas_advanced_cluster.this.name
   } : null
 }
