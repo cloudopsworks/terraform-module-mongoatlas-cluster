@@ -116,43 +116,52 @@ variable "project_name" {
 #       region_name: "US_EAST_1" (optional, default region from deployment)
 #       copy_oplogs: true | false (optional, default false)
 #   global:
-#     zone_name: "us-east-1" (optional, default null)
-#     zone_id: "us-east-1a" (optional, default null)
-#     regions:
-#       backing_provider: "AWS" | "GCP" | "AZURE" (optional, default null)
-#       provider: TENANT | SHARED | PUBLIC (optional, default TENANT)
-#       region: "US_EAST_1" (optional, will use the region of the deployment)
-#       priority: 1 (optional, default 7)
+#     zone_name: "zone-1"          # (Optional) Zone name for the primary replication spec (used in GEOSHARDED clusters). Default: null
+#   regions:                        # (Optional) List of region_configs for the primary replication spec (first shard).
+#     - backing_provider: "AWS"    # (Optional) Backing cloud provider for TENANT clusters: AWS | GCP | AZURE. Default: null
+#       provider: "TENANT"         # (Optional) Atlas provider type: TENANT | AWS | GCP | AZURE. Default: TENANT
+#       region: "US_EAST_1"        # (Optional) Atlas region name. Defaults to the deployment region converted to Atlas format.
+#       priority: 7                # (Optional) Election priority (1-7, 7 = primary). Default: 7
 #       electable:
-#         size: M10 (optional, default M2)
-#         count: 3 (optional, default null)
-#         iops: 1000 (optional, default null)
-#         volume_type: "gp2" (optional, default null)
-#         volume_size: 100 (optional, default null)
-#       analythics:
-#         size: M10 (optional, default M2)
-#         count: 3 (optional, default null)
-#         iops: 1000 (optional, default null)
-#         volume_type: "gp2" (optional, default null)
-#         volume_size: 100 (optional, default null)
+#         size: "M10"              # (Optional) Instance size for electable nodes. Default: M2
+#         count: 3                 # (Optional) Number of electable nodes. Default: null
+#         iops: 1000               # (Optional) Provisioned IOPS (AWS only). Default: null
+#         volume_type: "gp3"       # (Optional) EBS volume type (AWS only). Default: null
+#         disk_size: 10            # (Optional) Disk size in GB, set at spec level (required by provider v2.0+). Default: null
+#       analytics:
+#         size: "M10"              # (Optional) Instance size for analytics nodes. Default: M2
+#         count: 1                 # (Optional) Number of analytics nodes. Default: null
+#         iops: 1000               # (Optional) Provisioned IOPS (AWS only). Default: null
+#         volume_type: "gp3"       # (Optional) EBS volume type (AWS only). Default: null
+#         disk_size: 10            # (Optional) Disk size in GB, set at spec level. Default: null
 #       read_only:
-#         size: M10 (optional, default M2)
-#         count: 3 (optional, default null)
-#         iops: 1000 (optional, default null)
-#         volume_type: "gp2" (optional, default null)
-#         volume_size: 100 (optional, default null)
+#         size: "M10"              # (Optional) Instance size for read-only nodes. Default: M2
+#         count: 1                 # (Optional) Number of read-only nodes. Default: null
+#         iops: 1000               # (Optional) Provisioned IOPS (AWS only). Default: null
+#         volume_type: "gp3"       # (Optional) EBS volume type (AWS only). Default: null
+#         disk_size: 10            # (Optional) Disk size in GB, set at spec level. Default: null
 #       auto_scaling:
-#         size: M10 (optional, default M2)
-#         count: 3 (optional, default null)
-#         iops: 1000 (optional, default null)
-#         volume_type: "gp2" (optional, default null)
-#         volume_size: 100 (optional, default null)
-#         analythics:
-#           size: M10 (optional, default M2)
-#           count: 3 (optional, default null)
-#           iops: 1000 (optional, default null)
-#           volume_type: "gp2" (optional, default null)
-#           volume_size: 100 (optional, default null)
+#         disk: true               # (Optional) Enable disk auto-scaling. Default: false
+#         compute: true            # (Optional) Enable compute auto-scaling. Default: false
+#         max_size: "M40"          # (Optional) Maximum instance size for compute auto-scaling. Default: null
+#         min_size: "M10"          # (Optional) Minimum instance size for compute auto-scaling. Default: null
+#         scale_down: true         # (Optional) Allow scale-down of compute. Default: false
+#         analytics:
+#           disk: true             # (Optional) Enable disk auto-scaling for analytics nodes. Default: false
+#           compute: true          # (Optional) Enable compute auto-scaling for analytics nodes. Default: false
+#           max_size: "M40"        # (Optional) Maximum instance size for analytics auto-scaling. Default: null
+#           min_size: "M10"        # (Optional) Minimum instance size for analytics auto-scaling. Default: null
+#           scale_down: true       # (Optional) Allow scale-down for analytics. Default: false
+#   shards:                         # (Optional) Additional shards for SHARDED / GEOSHARDED clusters. Each entry creates one replication_specs element (provider v2.0 independent shard scaling). Default: []
+#     - zone_name: "zone-1"        # (Optional) Zone name for this shard (required for GEOSHARDED). Default: null
+#       regions:                   # (Optional) List of region_configs for this shard. Same structure as settings.regions above.
+#         - provider: "AWS"
+#           region: "EU_WEST_1"
+#           priority: 7
+#           electable:
+#             size: "M30"
+#             count: 3
+#             disk_size: 10
 #   hoop:
 #     enabled: true | false
 #     agent: hoop-agent-name
