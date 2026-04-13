@@ -42,6 +42,6 @@ resource "random_password" "randompass_rotated" {
 }
 
 resource "time_rotating" "randompass" {
-  count         = try(var.settings.admin_user.enabled, false) ? 1 : 0
+  count         = try(var.settings.admin_user.enabled, false) && try(var.settings.admin_user.rotation_lambda_name, "") == "" ? 1 : 0
   rotation_days = try(var.settings.admin_user.password_rotation_period, 90)
 }
