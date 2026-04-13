@@ -33,12 +33,6 @@ resource "random_password" "randompass_rotated" {
   min_special      = 0
   min_numeric      = 2
   min_lower        = 2
-
-  lifecycle {
-    replace_triggered_by = [
-      time_rotating.randompass[0].rotation_rfc3339
-    ]
-  }
 }
 
 resource "time_rotating" "randompass" {
