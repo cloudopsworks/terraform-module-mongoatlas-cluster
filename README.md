@@ -8,30 +8,27 @@
   -->
 [![README Header][readme_header_img]][readme_header_link]
 
-[![cloudopsworks][logo]](https://cloudops.works/)
+[![cloudopsworks][logo]](https://cloudopsworks.co/)
 
-# Terraform Mongo DB Atlas Cluster with AWS Secrets Manager
+# Terraform MongoDB Atlas Cluster (Generic)
+
+ [![Latest Release](https://img.shields.io/github/release/cloudopsworks/terraform-module-mongoatlas-cluster.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster/releases/latest) [![Last Updated](https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-mongoatlas-cluster.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster/commits)
 
 
-
-
-Terraform module for provisioning and managing MongoDB Atlas clusters with AWS Secrets Manager integration. 
-Supports automated password rotation, private endpoints, and secure credential management through AWS Secrets Manager.
+Generic Terraform module for provisioning and managing MongoDB Atlas clusters.
+Provider-agnostic — no cloud SDK dependency. Intended to be used as a sub-module
+by cloud-specific wrapper modules (AWS, GCP, Azure) that handle secret storage and
+provider-specific integrations.
 
 
 ---
 
 This project is part of our comprehensive approach towards DevOps Acceleration. 
 [<img align="right" title="Share via Email" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/ios-mail.svg"/>][share_email]
-[<img align="right" title="Share on Google+" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-googleplus.svg" />][share_googleplus]
 [<img align="right" title="Share on Facebook" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-facebook.svg" />][share_facebook]
 [<img align="right" title="Share on Reddit" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-reddit.svg" />][share_reddit]
 [<img align="right" title="Share on LinkedIn" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-linkedin.svg" />][share_linkedin]
-[<img align="right" title="Share on Twitter" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
-
-
-[![Terraform Open Source Modules](https://docs.cloudops.works/images/terraform-open-source-modules.svg)][terraform_modules]
-
+[<img align="right" title="Share on X" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
 
 
 It's 100% Open Source and licensed under the [APACHE2](LICENSE).
@@ -51,14 +48,24 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 
 ## Introduction
 
-This Terraform module provides a comprehensive solution for deploying and managing MongoDB Atlas clusters with seamless AWS Secrets Manager integration. It handles:
+This module provisions MongoDB Atlas clusters using only the `mongodbatlas` provider.
+It handles:
 
-- MongoDB Atlas cluster provisioning with customizable configurations
-- Automatic admin user creation with secure password generation
-- AWS Secrets Manager integration for credential storage
-- Optional password rotation through AWS Lambda
-- Support for both standard and SRV connection strings
-- Private endpoint configuration capabilities
+- MongoDB Atlas advanced cluster provisioning with full replication spec support
+- Automatic admin database user creation with secure password generation
+- Terraform-managed or externally-managed password rotation (provider-agnostic)
+- Cloud backup schedule configuration (hourly, daily, weekly, monthly, yearly)
+- Backup export bucket support (AWS S3, GCP GCS, Azure Blob via configurable `cloud_provider`)
+- Multi-region and global cluster zone configuration
+- BI Connector and advanced database settings
+- Sensitive `cluster_credentials` output consumed by cloud-specific wrapper modules
+
+Cloud-specific secret storage (AWS Secrets Manager, GCP Secret Manager, Azure Key Vault)
+and tooling integrations (HOOP, etc.) are handled by the respective wrapper modules:
+
+- [`terraform-module-mongoatlas-aws-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-cluster)
+- [`terraform-module-mongoatlas-gcp-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-gcp-cluster)
+- [`terraform-module-mongoatlas-azurerm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azurerm-cluster)
 
 ## Usage
 
@@ -67,279 +74,239 @@ This Terraform module provides a comprehensive solution for deploying and managi
 Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster/releases).
 
 
-### Basic Configuration
+### Terragrunt Usage
 
 ```hcl
-module "mongodb_cluster" {
-  source = "cloudopsworks/terraform-module-mongoatlas-cluster"
+# terragrunt.hcl
+include "root" {
+  path = find_in_parent_folders()
+}
 
-  project_id = "your-atlas-project-id"
-  name       = "my-cluster"
-  environment = "development"
+terraform {
+  source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster.git?ref=v1.0.0"
+}
+
+inputs = {
+  # Required variables
+  project_id = "your-atlas-project-id"  # (Required) The ID of the MongoDB Atlas project where the cluster will be created
+  name       = "my-cluster"             # (Required) Name of the MongoDB cluster
+
+  # Optional variables
+  region       = "us-east-1"  # (Optional) Cloud provider region where the module is deployed. Used to compute Atlas region name (e.g., 'us-east-1' → 'US_EAST_1'). Required when using backup copy settings or when no explicit region is set in settings.regions. Default: ""
+  cloud_provider = "AWS"      # (Optional) Default cloud provider for Atlas backup export bucket and copy settings. Valid values: 'AWS', 'GCP', 'AZURE'. Can be overridden per-resource in settings. Default: "AWS"
+  name_prefix  = ""           # (Optional) Prefix for the name of the resources. Default: ""
+  project_name = ""           # (Optional) The name of the project where the cluster will be created. Default: ""
+  run_hoop     = false        # (Optional) Run HOOP with agent. WARNING: This will run the HOOP command in output in a null_resource. Use with caution. Default: false
 
   settings = {
-    admin_user = {
-      enabled = true
-      username = "atlas-admin"
-      rotation_period = 90
-      auth_database = "admin"
-    }
+    # Cluster configuration
+    cluster_type:               "REPLICASET"  # (Optional) Cluster type. Valid values: REPLICASET | SHARDED | GEOSHARDED. Default: "REPLICASET"
+    major_version:              7.0           # (Optional) MongoDB major version. Default: null (uses Atlas default)
+    termination_protection:     true          # (Optional) Enable termination protection. Default: null
+    version_release:            "LTS"         # (Optional) Release cadence. Valid values: LTS | CONTINUOUS. Default: "LTS"
+    encryption_at_rest_enabled: false         # (Optional) Enable encryption at rest. Default: false
+    encryption_at_rest_provider: "AWS"        # (Optional) Provider for encryption at rest. Valid values: AWS | GCP | AZURE. Default: "AWS"
+    cloud_provider:             "AWS"         # (Optional) Default cloud provider for backup export/copy. Valid values: AWS | GCP | AZURE. Default: "AWS"
 
-    cluster = {
-      mongo_db_major_version = "6.0"
-      provider_name         = "AWS"
-      backing_provider_name = "AWS"
-      provider_region_name  = "US_EAST_1"
-      provider_instance_size_name = "M10"
-      disk_size_gb = 10
-      backup_enabled = true
-      pit_enabled = false
-    }
-  }
+    # BI Connector configuration
+    bi_connector:
+      enabled:          false       # (Optional) Enable BI Connector. Default: false
+      read_preference:  "secondary" # (Optional) Read preference for BI Connector. Valid values: primary | secondary | primaryPreferred | secondaryPreferred | nearest. Default: "secondary"
 
-  tags = {
-    Environment = "development"
-    Project     = "example"
-  }
-}
-```
+    # Admin user configuration
+    admin_user:
+      enabled:                  true          # (Optional) Create an Atlas admin user. Default: false
+      username:                 "my-admin"    # (Optional) Username for the admin user. Default: auto-generated from name
+      auth_database:            "admin"       # (Optional) Authentication database. Default: "admin"
+      use_external_rotation:    false         # (Optional) When true, an external rotation manager handles the password. Default: false
+      rotation_lambda_name:     ""            # (Optional) External rotator identifier (e.g., Lambda name for AWS). Required when use_external_rotation is true.
+      rotation_period:          90            # (Optional) Password rotation period in days. Default: 90
+      rotation_duration:        "1h"          # (Optional) Duration for external rotator execution. Default: "1h"
+      password_rotation_period: 90            # (Optional) time_rotating period in days for Terraform-managed rotation. Default: 90
 
-### Advanced Features
+    # Advanced database settings
+    advanced:
+      default_write_concern:   "majority"  # (Optional) Write concern. Valid values: majority | majorityAndTagSet | majorityAndTagSetAny | majorityAndTagSetAnyRemote | majorityAndTagSetAnyLocal | majorityAndTagSetAnyRemoteLocal. Default: null
+      javascript:              false        # (Optional) Enable JavaScript execution on server. Default: null
+      tls_protocol:            "TLS1_2"    # (Optional) TLS protocol version. Valid values: TLS1_0 | TLS1_1 | TLS1_2 | TLS1_3. Default: null
+      no_table_scan:           false        # (Optional) Disable table scans. Default: null
+      oplog_size:              50           # (Optional) Oplog size in MB. Default: null
+      oplog_retention:         30           # (Optional) Oplog retention in hours. Default: null
+      bi:
+        sample_size:           1000         # (Optional) BI Connector sample size. Default: null
+        refresh_interval:      60           # (Optional) BI Connector refresh interval in seconds. Default: null
+      transaction_lifetime:    30           # (Optional) Transaction lifetime in minutes. Default: null
 
-1. Password Rotation with Lambda:
-```hcl
-settings = {
-  admin_user = {
-    enabled = true
-    rotation_lambda_name = "atlas-password-rotation-function"
-    rotate_immediately = true
-    rotation_period = 30
-    rotation_duration = "1h"
-    password_rotation_period = 90
-  }
-}
-```
+    # Backup configuration
+    backup:
+      enabled:              true     # (Optional) Enable cloud backup. Default: false
+      hour_of_day:          0        # (Optional) Backup hour (0-23). Default: 0
+      minute_of_hour:       0        # (Optional) Backup minute (0-59). Default: 0
+      restore_window_days:  1        # (Optional) Restore window in days. Default: 1
+      auto_export:          false    # (Optional) Enable automatic export. Default: null
+      export_prefix:        ""       # (Optional) Use org and group names as export prefix. Default: null
+      hourly:
+        interval:           6        # (Optional) Frequency in hours. Valid values: 1, 2, 4, 6, 8, 12. Default: 1
+        retention_unit:     "days"   # (Optional) Retention unit. Default: "days"
+        retention_value:    2        # (Optional) Retention value. Default: 1
+      daily:
+        interval:           1        # (Optional) Frequency (must be 1). Default: 1
+        retention_unit:     "days"   # (Optional) Retention unit. Default: "days"
+        retention_value:    7        # (Optional) Retention value. Default: 7
+      weekly:
+        interval:           1        # (Optional) Day of week (1=Sunday … 7=Saturday). Default: 1
+        retention_unit:     "weeks"  # (Optional) Retention unit. Default: "weeks"
+        retention_value:    4        # (Optional) Retention value. Default: 4
+      monthly:
+        interval:           1        # (Optional) Day of month (1-28). Default: 1
+        retention_unit:     "months" # (Optional) Retention unit. Default: "months"
+        retention_value:    12       # (Optional) Retention value. Default: 12
+      yearly:
+        interval:           1        # (Optional) Month of year (1-12). Default: 1
+        retention_unit:     "years"  # (Optional) Retention unit. Default: "years"
+        retention_value:    2        # (Optional) Retention value. Default: 2
+      export:
+        cloud_provider:     "AWS"   # (Optional) Override cloud provider for this export bucket. Valid values: AWS | GCP | AZURE. Default: settings.cloud_provider
+        frequency_type:     "daily" # (Optional) Export frequency. Valid values: HOURLY | DAILY | WEEKLY | MONTHLY | YEARLY. Default: "daily"
+        bucket_name:        "my-s3-bucket"  # (Required for AWS) S3 bucket name
+        iam_role_id:        "role-id"       # (Required for AWS) IAM role ID (assumed role) for bucket access
+        service_url:        ""              # (Required for GCP/AZURE) Service URL for the export bucket
+        role_id:            ""              # (Required for GCP/AZURE) Role ID for bucket access
+      copy:
+        cloud_provider:     "AWS"          # (Optional) Override cloud provider for copy settings. Valid values: AWS | GCP | AZURE. Default: settings.cloud_provider
+        frequencies:        ["daily"]      # (Optional) Frequencies to copy. Default: []
+        region_name:        "US_EAST_1"    # (Optional) Target region for copy. Default: computed from var.region
+        copy_oplogs:        false          # (Optional) Copy oplogs. Default: false
 
-2. Private Endpoint Configuration:
-```hcl
-settings = {
-  private_endpoint = {
-    enabled = true
-    region  = "us-east-1"
-    vpc_id  = "vpc-1234567"
-    subnet_ids = ["subnet-abc123", "subnet-def456"]
-    security_group_ids = ["sg-123456"]
-  }
-}
-```
+    # Global cluster configuration
+    global:
+      zone_name:  "Zone 1"   # (Optional) Zone name for global clusters. Default: null
+      zone_id:    ""         # (Optional) Zone ID for global clusters. Default: null
 
-3. Advanced Cluster Settings:
-```hcl
-settings = {
-  cluster = {
-    mongo_db_major_version = "6.0"
-    provider_name = "AWS"
-    provider_instance_size_name = "M30"
-    backup_enabled = true
-    pit_enabled = true
-    disk_size_gb = 100
-    auto_scaling_disk_gb_enabled = true
-    auto_scaling_compute_enabled = true
-    auto_scaling_compute_scale_down_enabled = true
-  }
-}
-```
-
-### Settings reference:
-The following settings are supported:
-```yaml
-settings:
-  cluster_type: "REPLICASET"
-  major_version: 7.0 (optional, default null)
-  termination_protection: true | false (optional, default null)
-  version_release: "LTS" | "GA" | "EA" (optional, default "LTS")
-  encryption_at_rest_enabled: true | false (optional, default false)
-  bi_connector:
-    enabled: true | false (optional, default false)
-    read_preference: "primary" | "secondary" | "primaryPreferred" | "secondaryPreferred" | "nearest" (optional, default "secondary")
-  admin_user:
-    enabled: true | false (optional, default false)
-    kms_key_id: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012" # KMS key for the password secret or Alias
-    rotation_lambda_name: "rds-rotation-lambda" # Name of the lambda function to rotate the password, required if managed_password_rotation is false
-    rotation_period: 90 # Rotation period in days for the password, defaults to 90days
-    rotation_duration: "1h" # Duration of the lambda function to rotate the password, defaults to 1h
-  advanced:
-    default_write_concern: "majority" | "majorityAndTagSet" | "majorityAndTagSetAny" | "majorityAndTagSetAnyRemote" | "majorityAndTagSetAnyLocal" | "majorityAndTagSetAnyRemoteLocal" (optional, default null)
-    javascript: true | false (optional, default false)
-    tls_protocol: "TLS1_0" | "TLS1_1" | "TLS1_2" | "TLS1_3" (optional, default null)
-    no_table_scan: true | false (optional, default null)
-    oplog_size: 50 (in MB optional, default null)
-    oplog_retention: 30 (in hours optional, default null)
-    bi:
-      sample_size: 1000 (optional, default null)
-      refresh_interval: 60 (in seconds optional, default null)
-    transaction_lifetime: 30 (in minutes optional, default null)
-  backup:
-    enabled: true | false (optional, default false)
-    hour_of_day: 0-23 (optional, default 0)
-    minute_of_hour: 0-59 (optional, default 0)
-    restore_window_days: 1 (optional, default 1)
-    auto_export: true | false (optional, default false)
-    export_prefix: string (optional, default null)
-    hourly:
-      interval: number (default: 1)
-      retention_unit: string (default: "days")
-      retention_value: number (default: 1)
-    daily:
-      interval: number (default: 1)
-      retention_unit: string (default: "days")
-      retention_value: number (default: 7)
-    weekly:
-      interval: number (default: 1)
-      retention_unit: string (default: "weeks")
-      retention_value: number (default: 4)
-    monthly:
-      interval: number (default: 1)
-      retention_unit: string (default: "months")
-      retention_value: number (default: 12)
-    yearly:
-      interval: number (default: 1)
-      retention_unit: string (default: "years")
-      retention_value: number (default: 2)
-    export:
-      frecuency_type: "HOURLY" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY" (optional, default daily)
-      bucket_name: string (required)
-      iam_role_id: string (required, IAM role ARN used for the bucket, assumed_role)
-    copy:
-      frequencies: []
-      region_name: "US_EAST_1" (optional, default region from deployment)
-      copy_oplogs: true | false (optional, default false)
-  global:
-    zone_name: "us-east-1" (optional, default null)
-    zone_id: "us-east-1a" (optional, default null)
+    # Region configuration (list of region objects)
     regions:
-      backing_provider: "AWS" | "GCP" | "AZURE" (optional, default null)
-      provider: TENANT | SHARED | PUBLIC (optional, default TENANT)
-      region: "US_EAST_1" (optional, will use the region of the deployment)
-      priority: 1 (optional, default 7)
-      electable:
-        size: M10 (optional, default M2)
-        count: 3 (optional, default null)
-        iops: 1000 (optional, default null)
-        volume_type: "gp2" (optional, default null)
-        volume_size: 100 (optional, default null)
-      analythics:
-        size: M10 (optional, default M2)
-        count: 3 (optional, default null)
-        iops: 1000 (optional, default null)
-        volume_type: "gp2" (optional, default null)
-        volume_size: 100 (optional, default null)
-      read_only:
-        size: M10 (optional, default M2)
-        count: 3 (optional, default null)
-        iops: 1000 (optional, default null)
-        volume_type: "gp2" (optional, default null)
-        volume_size: 100 (optional, default null)
-      auto_scaling:
-        size: M10 (optional, default M2)
-        count: 3 (optional, default null)
-        iops: 1000 (optional, default null)
-        volume_type: "gp2" (optional, default null)
-        volume_size: 100 (optional, default null)
-        analythics:
-          size: M10 (optional, default M2)
-          count: 3 (optional, default null)
-          iops: 1000 (optional, default null)
-          volume_type: "gp2" (optional, default null)
-          volume_size: 100 (optional, default null)
-  hoop:
-    enabled: true | false
-    agent: hoop-agent-name
-    tags: ["tag1", "tag2"]
+      - backing_provider: "AWS"       # (Optional) Backing cloud provider. Valid values: AWS | GCP | AZURE. Default: null
+        provider:         "AWS"       # (Optional) Provider type. Valid values: TENANT | SHARED | PUBLIC. Default: "TENANT"
+        region:           "US_EAST_1" # (Optional) Atlas region name. Default: computed from var.region (e.g., 'us-east-1' → 'US_EAST_1')
+        priority:         7           # (Optional) Electable node priority (1-7). Default: 7
+        electable:
+          size:       "M10"  # (Optional) Instance size. Default: "M2"
+          count:      3      # (Optional) Node count. Default: null
+          iops:       3000   # (Optional) IOPS (AWS only). Default: null
+          volume_type: "gp3" # (Optional) EBS volume type (AWS only). Default: null
+          volume_size:  100    # (Optional) Disk size in GB. Default: null
+        analytics:
+          size:       "M10"  # (Optional) Instance size. Default: "M2"
+          count:      1      # (Optional) Node count. Default: null
+          iops:       3000   # (Optional) IOPS (AWS only). Default: null
+          volume_type: "gp3" # (Optional) EBS volume type (AWS only). Default: null
+          volume_size:  100    # (Optional) Disk size in GB. Default: null
+        read_only:
+          size:       "M10"  # (Optional) Instance size. Default: "M2"
+          count:      0      # (Optional) Node count. Default: null
+          iops:       3000   # (Optional) IOPS (AWS only). Default: null
+          volume_type: "gp3" # (Optional) EBS volume type (AWS only). Default: null
+          volume_size:  100    # (Optional) Disk size in GB. Default: null
+        auto_scaling:
+          disk:         false   # (Optional) Enable disk auto-scaling. Default: false
+          compute:      false   # (Optional) Enable compute auto-scaling. Default: false
+          max_size:     "M40"   # (Optional) Maximum instance size. Default: null
+          min_size:     "M10"   # (Optional) Minimum instance size. Default: null
+          scale_down:   false   # (Optional) Enable scale-down. Default: false
+          analytics:
+            disk:       false   # (Optional) Enable analytics disk auto-scaling. Default: false
+            compute:    false   # (Optional) Enable analytics compute auto-scaling. Default: false
+            max_size:   "M40"   # (Optional) Maximum analytics instance size. Default: null
+            min_size:   "M10"   # (Optional) Minimum analytics instance size. Default: null
+            scale_down: false   # (Optional) Enable analytics scale-down. Default: false
+
+    # HOOP configuration
+    hoop:
+      enabled: false  # (Optional) Enable HOOP integration. Default: false
+      agent:   ""     # (Optional) HOOP agent name. Default: null
+      tags:    []     # (Optional) HOOP tags. Default: []
+  }
+}
 ```
 
 ## Quick Start
 
-1. Configure AWS credentials:
-   ```bash
-   export AWS_ACCESS_KEY_ID="your_access_key"
-   export AWS_SECRET_ACCESS_KEY="your_secret_key"
-   export AWS_REGION="us-east-1"
-   ```
-
-2. Configure MongoDB Atlas Provider:
+1. Configure MongoDB Atlas credentials:
    ```bash
    export MONGODB_ATLAS_PUBLIC_KEY="your_public_key"
    export MONGODB_ATLAS_PRIVATE_KEY="your_private_key"
    ```
 
-3. Create a basic module configuration in `main.tf`:
+2. Use one of the cloud-specific wrapper modules for full integration:
+   - **AWS**: [`terraform-module-mongoatlas-aws-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-cluster)
+   - **GCP**: [`terraform-module-mongoatlas-gcp-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-gcp-cluster)
+   - **Azure**: [`terraform-module-mongoatlas-azurerm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azurerm-cluster)
+
+3. Or use this module directly in a Terragrunt configuration:
    ```hcl
-   module "mongodb" {
-     source = "cloudopsworks/terraform-module-mongoatlas-cluster"
+   # terragrunt.hcl
+   include "root" {
+     path = find_in_parent_folders()
+   }
 
+   terraform {
+     source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster.git?ref=v1.0.0"
+   }
+
+   inputs = {
      project_id = "your-atlas-project-id"
-     name       = "quick-start-cluster"
-     environment = "development"
-
-     settings = {
-       admin_user = {
-         enabled = true
-         username = "quick-start-admin"
-       }
-
-       cluster = {
-         mongo_db_major_version = "6.0"
-         provider_name = "AWS"
-         provider_region_name = "US_EAST_1"
-         provider_instance_size_name = "M10"
-         backup_enabled = true
-       }
-     }
-
-     tags = {
-       Environment = "development"
-       Project     = "quickstart"
-     }
+     name       = "my-cluster"
+     region     = "us-east-1"
+     settings   = { ... }
    }
    ```
 
-4. Initialize Terraform:
+4. Run `terragrunt init && terragrunt plan && terragrunt apply`
+
+5. Retrieve credentials from the sensitive `cluster_credentials` output:
    ```bash
-   terraform init
+   terragrunt output -json cluster_credentials
    ```
 
-5. Review the execution plan:
-   ```bash
-   terraform plan
+2. Use one of the cloud-specific wrapper modules for full integration:
+   - **AWS**: [`terraform-module-mongoatlas-aws-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-aws-cluster)
+   - **GCP**: [`terraform-module-mongoatlas-gcp-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-gcp-cluster)
+   - **Azure**: [`terraform-module-mongoatlas-azurerm-cluster`](https://github.com/cloudopsworks/terraform-module-mongoatlas-azurerm-cluster)
+
+3. Or use this module directly in a Terragrunt configuration:
+   ```hcl
+   # terragrunt.hcl
+   include "root" {
+     path = find_in_parent_folders()
+   }
+
+   terraform {
+     source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster.git?ref=v1.0.0"
+   }
+
+   inputs = {
+     project_id = "your-atlas-project-id"
+     name       = "my-cluster"
+     region     = "us-east-1"
+     settings   = { ... }
+   }
    ```
 
-6. Apply the configuration:
-   ```bash
-   terraform apply
-   ```
+4. Run `terragrunt init && terragrunt plan && terragrunt apply`
 
-7. Retrieve connection credentials from AWS Secrets Manager:
+5. Retrieve credentials from the sensitive `cluster_credentials` output:
    ```bash
-   aws secretsmanager get-secret-value \
-     --secret-id /mongodbatlas/quick-start-cluster/admin-user-credentials \
-     --query 'SecretString' \
-     --output text
-   ```
-
-8. Test the connection using the MongoDB shell:
-   ```bash
-   mongosh "mongodb+srv://<username>:<password>@<cluster-url>"
+   terragrunt output -json cluster_credentials
    ```
 
 
 ## Examples
 
-### Terragrunt Basic Example
+### Basic Single-Region Cluster
 
 ```hcl
 # terragrunt.hcl
-include {
+include "root" {
   path = find_in_parent_folders()
 }
 
@@ -348,63 +315,126 @@ terraform {
 }
 
 inputs = {
-  project_id = "your-atlas-project-id"
-  name       = "production-cluster"
+  project_id = "your-atlas-project-id"  # (Required) The ID of the MongoDB Atlas project
+  name       = "dev-cluster"            # (Required) Name of the MongoDB cluster
+  region     = "us-east-1"              # (Optional) Cloud provider region
 
   settings = {
+    cluster_type  = "REPLICASET"
+    major_version = 7.0
     admin_user = {
       enabled = true
-      username = "prod-admin"
     }
-
-    cluster = {
-      mongo_db_major_version = "6.0"
-      provider_name         = "AWS"
-      provider_region_name  = "US_EAST_1"
-      provider_instance_size_name = "M30"
-    }
+    regions = [{
+      provider         = "AWS"
+      backing_provider = "AWS"
+      region           = "US_EAST_1"
+      priority         = 7
+      electable = {
+        size  = "M10"
+        count = 3
+      }
+    }]
   }
 }
 ```
 
-### Terragrunt Production Example with Private Endpoint
+### Production Cluster with Backup
 
 ```hcl
-# terragrunt.hcl
-include {
-  path = find_in_parent_folders()
-}
-
-terraform {
-  source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster.git?ref=v1.0.0"
-}
-
 inputs = {
-  project_id = "your-atlas-project-id"
-  name       = "production-cluster"
+  project_id = "your-atlas-project-id"  # (Required) The ID of the MongoDB Atlas project
+  name       = "prod-cluster"           # (Required) Name of the MongoDB cluster
+  region     = "us-east-1"              # (Optional) Cloud provider region
 
   settings = {
+    cluster_type            = "REPLICASET"
+    major_version           = 7.0
+    termination_protection  = true
     admin_user = {
-      enabled = true
-      username = "prod-admin"
-      rotation_lambda_name = "atlas-rotation-lambda"
-      rotation_period = 30
+      enabled                  = true
+      password_rotation_period = 90
     }
+    backup = {
+      enabled             = true
+      hour_of_day         = 2
+      restore_window_days = 7
+      daily = {
+        interval        = 1
+        retention_unit  = "days"
+        retention_value = 7
+      }
+      weekly = {
+        interval        = 1
+        retention_unit  = "weeks"
+        retention_value = 4
+      }
+      monthly = {
+        interval        = 1
+        retention_unit  = "months"
+        retention_value = 12
+      }
+    }
+    regions = [{
+      provider         = "AWS"
+      backing_provider = "AWS"
+      region           = "US_EAST_1"
+      priority         = 7
+      electable = {
+        size  = "M30"
+        count = 3
+      }
+    }]
+  }
+}
+```
 
-    cluster = {
-      mongo_db_major_version = "6.0"
-      provider_name         = "AWS"
-      provider_region_name  = "US_EAST_1"
-      provider_instance_size_name = "M30"
-      backup_enabled        = true
-      pit_enabled          = true
-    }
+### Production Cluster with Backup
 
-    private_endpoint = {
-      enabled = true
-      region  = "us-east-1"
-      vpc_id  = dependency.vpc.outputs.vpc_id
+```hcl
+inputs = {
+  project_id = "your-atlas-project-id"  # (Required) The ID of the MongoDB Atlas project
+  name       = "prod-cluster"           # (Required) Name of the MongoDB cluster
+  region     = "us-east-1"              # (Optional) Cloud provider region
+
+  settings = {
+    cluster_type            = "REPLICASET"
+    major_version           = 7.0
+    termination_protection  = true
+    admin_user = {
+      enabled                  = true
+      password_rotation_period = 90
     }
+    backup = {
+      enabled             = true
+      hour_of_day         = 2
+      restore_window_days = 7
+      daily = {
+        interval        = 1
+        retention_unit  = "days"
+        retention_value = 7
+      }
+      weekly = {
+        interval        = 1
+        retention_unit  = "weeks"
+        retention_value = 4
+      }
+      monthly = {
+        interval        = 1
+        retention_unit  = "months"
+        retention_value = 12
+      }
+    }
+    regions = [{
+      provider         = "AWS"
+      backing_provider = "AWS"
+      region           = "US_EAST_1"
+      priority         = 7
+      electable = {
+        size  = "M30"
+        count = 3
+      }
+    }]
   }
 }
 ```
@@ -418,86 +448,11 @@ Available targets:
   help                                Help screen
   help/all                            Display help for all targets
   help/short                          This help short screen
+  init/%                              Initialize the project for a specific cloud provider: %S
   lint                                Lint terraform/opentofu code
   tag                                 Tag the current version
 
 ```
-## Requirements
-
-| Name | Version |
-|------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.89 |
-| <a name="requirement_mongodbatlas"></a> [mongodbatlas](#requirement\_mongodbatlas) | ~> 1.32 |
-| <a name="requirement_null"></a> [null](#requirement\_null) | ~> 3.2 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.4 |
-| <a name="requirement_time"></a> [time](#requirement\_time) | ~> 0.13 |
-
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.94.1 |
-| <a name="provider_mongodbatlas"></a> [mongodbatlas](#provider\_mongodbatlas) | 1.32.0 |
-| <a name="provider_null"></a> [null](#provider\_null) | 3.2.3 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.7.1 |
-| <a name="provider_time"></a> [time](#provider\_time) | 0.13.0 |
-
-## Modules
-
-| Name | Source | Version |
-|------|--------|---------|
-| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
-
-## Resources
-
-| Name | Type |
-|------|------|
-| [aws_secretsmanager_secret.atlas_cred](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
-| [aws_secretsmanager_secret_rotation.user](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_rotation) | resource |
-| [aws_secretsmanager_secret_version.atlas_cred](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
-| [aws_secretsmanager_secret_version.atlas_cred_rotated](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
-| [mongodbatlas_advanced_cluster.this](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/resources/advanced_cluster) | resource |
-| [mongodbatlas_cloud_backup_schedule.this](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/resources/cloud_backup_schedule) | resource |
-| [mongodbatlas_cloud_backup_snapshot_export_bucket.this](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/resources/cloud_backup_snapshot_export_bucket) | resource |
-| [mongodbatlas_database_user.admin_user](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/resources/database_user) | resource |
-| [null_resource.hoop_connection](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
-| [random_password.randompass](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
-| [random_password.randompass_rotated](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
-| [time_rotating.randompass](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/rotating) | resource |
-| [aws_lambda_function.rotation_function](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/lambda_function) | data source |
-| [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
-| [mongodbatlas_project.this](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/data-sources/project) | data source |
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | n/a | `map(string)` | `{}` | no |
-| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Establish this is a HUB or spoke configuration | `bool` | `false` | no |
-| <a name="input_name"></a> [name](#input\_name) | Name of the resource | `string` | `""` | no |
-| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix for the name of the resources | `string` | `""` | no |
-| <a name="input_org"></a> [org](#input\_org) | n/a | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | (optional) The ID of the project where the cluster will be created | `string` | `""` | no |
-| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | (optional) The name of the project where the cluster will be created | `string` | `""` | no |
-| <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null\_resource | `bool` | `false` | no |
-| <a name="input_settings"></a> [settings](#input\_settings) | Settings for the module | `any` | `{}` | no |
-| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | n/a | `string` | `"001"` | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| <a name="output_cluster_admin_user"></a> [cluster\_admin\_user](#output\_cluster\_admin\_user) | n/a |
-| <a name="output_cluster_connection_strings"></a> [cluster\_connection\_strings](#output\_cluster\_connection\_strings) | n/a |
-| <a name="output_cluster_containers"></a> [cluster\_containers](#output\_cluster\_containers) | n/a |
-| <a name="output_cluster_id"></a> [cluster\_id](#output\_cluster\_id) | n/a |
-| <a name="output_cluster_name"></a> [cluster\_name](#output\_cluster\_name) | n/a |
-| <a name="output_cluster_secrets_credentials"></a> [cluster\_secrets\_credentials](#output\_cluster\_secrets\_credentials) | n/a |
-| <a name="output_cluster_server_type"></a> [cluster\_server\_type](#output\_cluster\_server\_type) | n/a |
-| <a name="output_cluster_state"></a> [cluster\_state](#output\_cluster\_state) | n/a |
-| <a name="output_cluster_version"></a> [cluster\_version](#output\_cluster\_version) | n/a |
-| <a name="output_hoop_connection"></a> [hoop\_connection](#output\_hoop\_connection) | n/a |
 
 
 
@@ -507,10 +462,9 @@ Available targets:
 
 File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster/issues), send us an [email][email] or join our [Slack Community][slack].
 
-[![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
 ## DevOps Tools
-
+[]()
 ## Slack Community
 
 
@@ -531,7 +485,7 @@ Please use the [issue tracker](https://github.com/cloudopsworks/terraform-module
 
 ## Copyrights
 
-Copyright © 2024-2025 [Cloud Ops Works LLC](https://cloudops.works)
+Copyright © 2024-2026 [Cloud Ops Works LLC](https://cloudops.works)
 
 
 
@@ -588,32 +542,31 @@ This project is maintained by [Cloud Ops Works LLC][website].
 [![README Footer][readme_footer_img]][readme_footer_link]
 [![Beacon][beacon]][website]
 
-  [logo]: https://cloudops.works/logo-300x69.svg
-  [docs]: https://cowk.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=docs
-  [website]: https://cowk.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=website
-  [github]: https://cowk.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=github
-  [jobs]: https://cowk.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=jobs
-  [hire]: https://cowk.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=hire
-  [slack]: https://cowk.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=slack
-  [linkedin]: https://cowk.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=linkedin
-  [twitter]: https://cowk.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=twitter
-  [testimonial]: https://cowk.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=testimonial
-  [office_hours]: https://cloudops.works/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=office_hours
-  [newsletter]: https://cowk.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=newsletter
-  [email]: https://cowk.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=email
-  [commercial_support]: https://cowk.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=commercial_support
-  [we_love_open_source]: https://cowk.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=we_love_open_source
-  [terraform_modules]: https://cowk.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=terraform_modules
-  [readme_header_img]: https://cloudops.works/readme/header/img
-  [readme_header_link]: https://cloudops.works/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=readme_header_link
-  [readme_footer_img]: https://cloudops.works/readme/footer/img
-  [readme_footer_link]: https://cloudops.works/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=readme_footer_link
-  [readme_commercial_support_img]: https://cloudops.works/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudops.works/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=Terraform+Mongo+DB+Atlas+Cluster+with+AWS+Secrets+Manager&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
-  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+Mongo+DB+Atlas+Cluster+with+AWS+Secrets+Manager&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
+  [logo]: https://cloudopsworks.co/images/main-logo.png
+  [docs]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=docs
+  [website]: https://cloudopsworks.co?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=website
+  [github]: https://cloudopsworks.co/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=github
+  [jobs]: https://cloudopsworks.co/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=jobs
+  [hire]: https://cloudopsworks.co/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=hire
+  [slack]: https://cloudopsworks.co/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=slack
+  [linkedin]: https://cloudopsworks.co/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=linkedin
+  [x]: https://cloudopsworks.co/x?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=x
+  [testimonial]: https://cloudopsworks.co/case-studies?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=testimonial
+  [office_hours]: https://cloudopsworks.co/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=office_hours
+  [newsletter]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=newsletter
+  [email]: https://cloudopsworks.co/contact?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=email
+  [commercial_support]: https://cloudopsworks.co/services?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=commercial_support
+  [we_love_open_source]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=we_love_open_source
+  [terraform_modules]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=terraform_modules
+  [readme_header_img]: https://cloudopsworks.co/images/readme-header.png
+  [readme_header_link]: https://cloudopsworks.co/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=readme_header_link
+  [readme_footer_img]: https://cloudopsworks.co/images/main-logo-footer.png
+  [readme_footer_link]: https://cloudopsworks.co/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=readme_footer_link
+  [readme_commercial_support_img]: https://cloudopsworks.co/readme/commercial-support/img
+  [readme_commercial_support_link]: https://cloudopsworks.co/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-cluster&utm_content=readme_commercial_support_link
+  [share_twitter]: https://x.com/intent/tweet/?text=Terraform+MongoDB+Atlas+Cluster+(Generic)&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
+  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+MongoDB+Atlas+Cluster+(Generic)&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
   [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
   [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
-  [share_email]: mailto:?subject=Terraform+Mongo+DB+Atlas+Cluster+with+AWS+Secrets+Manager&body=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
-  [beacon]: https://ga-beacon.cloudops.works/G-7XWMFVFXZT/cloudopsworks/terraform-module-mongoatlas-cluster?pixel&cs=github&cm=readme&an=terraform-module-mongoatlas-cluster
+  [share_email]: mailto:?subject=Terraform+MongoDB+Atlas+Cluster+(Generic)&body=https://github.com/cloudopsworks/terraform-module-mongoatlas-cluster
+  [beacon]: https://ga-beacon.cloudospworks.co/G-QMZVYYN2VN/cloudopsworks/terraform-module-mongoatlas-cluster?pixel&cs=github&cm=readme&an=terraform-module-mongoatlas-cluster
