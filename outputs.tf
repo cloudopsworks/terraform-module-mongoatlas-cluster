@@ -1,7 +1,10 @@
 ##
-# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2026
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
 
 output "cluster_name" {
@@ -36,6 +39,8 @@ output "cluster_admin_user" {
   value = try(var.settings.admin_user.enabled, false) ? mongodbatlas_database_user.admin_user[0].username : ""
 }
 
-output "cluster_secrets_credentials" {
-  value = try(var.settings.admin_user.enabled, false) ? aws_secretsmanager_secret.atlas_cred[0].name : ""
+output "cluster_credentials" {
+  description = "Full credentials map including username, password, connection strings. Sensitive — consumed by cloud-specific wrapper modules to store in their secret store."
+  value       = local.cluster_credentials
+  sensitive   = true
 }
