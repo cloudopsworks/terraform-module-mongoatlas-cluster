@@ -46,54 +46,106 @@ resource "mongodbatlas_advanced_cluster" "this" {
     sample_refresh_interval_bi_connector = try(var.settings.advanced.bi.refresh_interval, null)
     transaction_lifetime_limit_seconds   = try(var.settings.advanced.transaction_lifetime, null)
   } : null
-  replication_specs = [
-    {
-      zone_name = try(var.settings.global.zone_name, null)
-      region_configs = [
-        for rc in try(var.settings.regions, []) : {
-          backing_provider_name = try(rc.backing_provider, null)
-          provider_name         = try(rc.provider, "TENANT")
-          region_name           = upper(replace(try(rc.region, local.atlas_region), "-", "_"))
-          priority              = try(rc.priority, 7)
-          electable_specs = length(try(rc.electable, {})) > 0 ? {
-            instance_size   = try(rc.electable.size, "M2")
-            node_count      = try(rc.electable.count, null)
-            disk_iops       = try(rc.electable.iops, null)
-            ebs_volume_type = try(rc.electable.volume_type, null)
-            disk_size_gb    = try(rc.electable.disk_size, null)
-          } : null
-          analytics_specs = length(try(rc.analytics, {})) > 0 ? {
-            instance_size   = try(rc.analytics.size, "M2")
-            node_count      = try(rc.analytics.count, null)
-            disk_iops       = try(rc.analytics.iops, null)
-            ebs_volume_type = try(rc.analytics.volume_type, null)
-            disk_size_gb    = try(rc.analytics.disk_size, null)
-          } : null
-          read_only_specs = length(try(rc.read_only, {})) > 0 ? {
-            instance_size   = try(rc.read_only.size, "M2")
-            node_count      = try(rc.read_only.count, null)
-            disk_iops       = try(rc.read_only.iops, null)
-            ebs_volume_type = try(rc.read_only.volume_type, null)
-            disk_size_gb    = try(rc.read_only.disk_size, null)
-          } : null
-          auto_scaling = length(try(rc.auto_scaling, {})) > 0 ? {
-            disk_gb_enabled            = try(rc.auto_scaling.disk, false)
-            compute_max_instance_size  = try(rc.auto_scaling.max_size, null)
-            compute_min_instance_size  = try(rc.auto_scaling.min_size, null)
-            compute_scale_down_enabled = try(rc.auto_scaling.scale_down, false)
-            compute_enabled            = try(rc.auto_scaling.compute, false)
-          } : null
-          analytics_auto_scaling = length(try(rc.auto_scaling.analytics, {})) > 0 ? {
-            disk_gb_enabled            = try(rc.auto_scaling.analytics.disk, false)
-            compute_max_instance_size  = try(rc.auto_scaling.analytics.max_size, null)
-            compute_min_instance_size  = try(rc.auto_scaling.analytics.min_size, null)
-            compute_scale_down_enabled = try(rc.auto_scaling.analytics.scale_down, false)
-            compute_enabled            = try(rc.auto_scaling.analytics.compute, false)
-          } : null
-        }
-      ]
-    }
-  ]
+  replication_specs = concat(
+    # Primary replication spec (first shard / single-region clusters)
+    [
+      {
+        zone_name = try(var.settings.global.zone_name, null)
+        region_configs = [
+          for rc in try(var.settings.regions, []) : {
+            backing_provider_name = try(rc.backing_provider, null)
+            provider_name         = try(rc.provider, "TENANT")
+            region_name           = upper(replace(try(rc.region, local.atlas_region), "-", "_"))
+            priority              = try(rc.priority, 7)
+            electable_specs = length(try(rc.electable, {})) > 0 ? {
+              instance_size   = try(rc.electable.size, "M2")
+              node_count      = try(rc.electable.count, null)
+              disk_iops       = try(rc.electable.iops, null)
+              ebs_volume_type = try(rc.electable.volume_type, null)
+              disk_size_gb    = try(rc.electable.disk_size, null)
+            } : null
+            analytics_specs = length(try(rc.analytics, {})) > 0 ? {
+              instance_size   = try(rc.analytics.size, "M2")
+              node_count      = try(rc.analytics.count, null)
+              disk_iops       = try(rc.analytics.iops, null)
+              ebs_volume_type = try(rc.analytics.volume_type, null)
+              disk_size_gb    = try(rc.analytics.disk_size, null)
+            } : null
+            read_only_specs = length(try(rc.read_only, {})) > 0 ? {
+              instance_size   = try(rc.read_only.size, "M2")
+              node_count      = try(rc.read_only.count, null)
+              disk_iops       = try(rc.read_only.iops, null)
+              ebs_volume_type = try(rc.read_only.volume_type, null)
+              disk_size_gb    = try(rc.read_only.disk_size, null)
+            } : null
+            auto_scaling = length(try(rc.auto_scaling, {})) > 0 ? {
+              disk_gb_enabled            = try(rc.auto_scaling.disk, false)
+              compute_max_instance_size  = try(rc.auto_scaling.max_size, null)
+              compute_min_instance_size  = try(rc.auto_scaling.min_size, null)
+              compute_scale_down_enabled = try(rc.auto_scaling.scale_down, false)
+              compute_enabled            = try(rc.auto_scaling.compute, false)
+            } : null
+            analytics_auto_scaling = length(try(rc.auto_scaling.analytics, {})) > 0 ? {
+              disk_gb_enabled            = try(rc.auto_scaling.analytics.disk, false)
+              compute_max_instance_size  = try(rc.auto_scaling.analytics.max_size, null)
+              compute_min_instance_size  = try(rc.auto_scaling.analytics.min_size, null)
+              compute_scale_down_enabled = try(rc.auto_scaling.analytics.scale_down, false)
+              compute_enabled            = try(rc.auto_scaling.analytics.compute, false)
+            } : null
+          }
+        ]
+      }
+    ],
+    # Additional shards for SHARDED / GEOSHARDED cluster types (one entry per shard)
+    [
+      for shard in try(var.settings.shards, []) : {
+        zone_name = try(shard.zone_name, null)
+        region_configs = [
+          for rc in try(shard.regions, []) : {
+            backing_provider_name = try(rc.backing_provider, null)
+            provider_name         = try(rc.provider, "TENANT")
+            region_name           = upper(replace(try(rc.region, local.atlas_region), "-", "_"))
+            priority              = try(rc.priority, 7)
+            electable_specs = length(try(rc.electable, {})) > 0 ? {
+              instance_size   = try(rc.electable.size, "M2")
+              node_count      = try(rc.electable.count, null)
+              disk_iops       = try(rc.electable.iops, null)
+              ebs_volume_type = try(rc.electable.volume_type, null)
+              disk_size_gb    = try(rc.electable.disk_size, null)
+            } : null
+            analytics_specs = length(try(rc.analytics, {})) > 0 ? {
+              instance_size   = try(rc.analytics.size, "M2")
+              node_count      = try(rc.analytics.count, null)
+              disk_iops       = try(rc.analytics.iops, null)
+              ebs_volume_type = try(rc.analytics.volume_type, null)
+              disk_size_gb    = try(rc.analytics.disk_size, null)
+            } : null
+            read_only_specs = length(try(rc.read_only, {})) > 0 ? {
+              instance_size   = try(rc.read_only.size, "M2")
+              node_count      = try(rc.read_only.count, null)
+              disk_iops       = try(rc.read_only.iops, null)
+              ebs_volume_type = try(rc.read_only.volume_type, null)
+              disk_size_gb    = try(rc.read_only.disk_size, null)
+            } : null
+            auto_scaling = length(try(rc.auto_scaling, {})) > 0 ? {
+              disk_gb_enabled            = try(rc.auto_scaling.disk, false)
+              compute_max_instance_size  = try(rc.auto_scaling.max_size, null)
+              compute_min_instance_size  = try(rc.auto_scaling.min_size, null)
+              compute_scale_down_enabled = try(rc.auto_scaling.scale_down, false)
+              compute_enabled            = try(rc.auto_scaling.compute, false)
+            } : null
+            analytics_auto_scaling = length(try(rc.auto_scaling.analytics, {})) > 0 ? {
+              disk_gb_enabled            = try(rc.auto_scaling.analytics.disk, false)
+              compute_max_instance_size  = try(rc.auto_scaling.analytics.max_size, null)
+              compute_min_instance_size  = try(rc.auto_scaling.analytics.min_size, null)
+              compute_scale_down_enabled = try(rc.auto_scaling.analytics.scale_down, false)
+              compute_enabled            = try(rc.auto_scaling.analytics.compute, false)
+            } : null
+          }
+        ]
+      }
+    ]
+  )
   tags = { for k, v in local.all_tags : k => replace(v, "/[/$%&#]/", "+") }
 }
 
@@ -159,7 +211,7 @@ resource "mongodbatlas_cloud_backup_schedule" "this" {
       cloud_provider     = try(copy_settings.value.cloud_provider, try(var.settings.cloud_provider, "AWS"))
       frequencies        = try(copy_settings.value.frequencies, [])
       region_name        = try(copy_settings.value.region_name, local.atlas_region)
-      zone_id            = mongodbatlas_advanced_cluster.this.replication_specs.*.zone_id[0]
+      zone_id            = mongodbatlas_advanced_cluster.this.replication_specs[0].zone_id
       should_copy_oplogs = try(copy_settings.value.copy_oplogs, false)
     }
   }
