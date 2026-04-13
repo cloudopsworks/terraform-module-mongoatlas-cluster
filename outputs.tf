@@ -28,7 +28,7 @@ output "cluster_state" {
 }
 
 output "cluster_containers" {
-  value = merge(mongodbatlas_advanced_cluster.this.replication_specs.*.container_id...)
+  value = merge([for rs in mongodbatlas_advanced_cluster.this.replication_specs : rs.container_id]...)
 }
 
 output "cluster_server_type" {
