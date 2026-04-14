@@ -207,7 +207,7 @@ Key rules:
 The `.boilerplate/inputs.yaml` file is the per-deployment configuration file loaded by `terragrunt.hcl` as `local.local_vars`. It must be kept in sync with the module's `variables-*.tf` files and serve as self-documenting configuration for operators.
 
 - **Scope**: Include **all** module-specific variables — those defined in `variables-module.tf` (or its renamed equivalent variables-*.tf).
-  - Include **both scalar top-level variables** (e.g., `name`, `name_prefix`, `project_id`, `run_hoop`) **and** complex object variables (e.g., `settings`). A common mistake is to only document the complex object and forget the plain scalars.
+  - Include **both scalar top-level variables** (e.g., `name`, `name_prefix`, `project_id`) **and** complex object variables (e.g., `settings`). A common mistake is to only document the complex object and forget the plain scalars.
   - Do **not** include variables that the Terragrunt hierarchy supplies automatically:
     - `is_hub` — injected by the boilerplate/template engine
     - `spoke_def` — sourced from `spoke-inputs.yaml`
