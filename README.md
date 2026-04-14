@@ -96,7 +96,6 @@ inputs = {
   cloud_provider = "AWS"      # (Optional) Default cloud provider for Atlas backup export bucket and copy settings. Valid values: 'AWS', 'GCP', 'AZURE'. Can be overridden per-resource in settings. Default: "AWS"
   name_prefix  = ""           # (Optional) Prefix for the name of the resources. Default: ""
   project_name = ""           # (Optional) The name of the project where the cluster will be created. Default: ""
-  run_hoop     = false        # (Optional) Run HOOP with agent. WARNING: This will run the HOOP command in output in a null_resource. Use with caution. Default: false
 
   settings = {
     # Cluster configuration
@@ -458,7 +457,7 @@ Available targets:
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.7 |
-| <a name="requirement_mongodbatlas"></a> [mongodbatlas](#requirement\_mongodbatlas) | ~> 2.1 |
+| <a name="requirement_mongodbatlas"></a> [mongodbatlas](#requirement\_mongodbatlas) | ~> 2.10 |
 
 ## Providers
 
@@ -502,7 +501,6 @@ Available targets:
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | (optional) The ID of the project where the cluster will be created | `string` | `""` | no |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | (optional) The name of the project where the cluster will be created | `string` | `""` | no |
 | <a name="input_region"></a> [region](#input\_region) | Cloud provider region where the module is deployed. Used to compute the Atlas region name (e.g. 'us-east-1' → 'US\_EAST\_1'). Required when using backup copy settings or when no explicit region is set in settings.regions. | `string` | `""` | no |
-| <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null\_resource | `bool` | `false` | no |
 | <a name="input_settings"></a> [settings](#input\_settings) | Settings for the module | `any` | `{}` | no |
 | <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | Spoke ID Number, must be a 3 digit number | `string` | `"001"` | no |
 
