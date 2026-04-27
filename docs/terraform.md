@@ -9,9 +9,9 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_mongodbatlas"></a> [mongodbatlas](#provider\_mongodbatlas) | 2.10.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.8.1 |
-| <a name="provider_time"></a> [time](#provider\_time) | 0.13.1 |
+| <a name="provider_mongodbatlas"></a> [mongodbatlas](#provider\_mongodbatlas) | ~> 2.10 |
+| <a name="provider_random"></a> [random](#provider\_random) | n/a |
+| <a name="provider_time"></a> [time](#provider\_time) | n/a |
 
 ## Modules
 
