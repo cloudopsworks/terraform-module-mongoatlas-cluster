@@ -20,7 +20,7 @@ output "cluster_version" {
 }
 
 output "cluster_connection_strings" {
-  value = mongodbatlas_advanced_cluster.this.connection_strings
+  value = local.cluster_connection_strings
 }
 
 output "cluster_state" {
